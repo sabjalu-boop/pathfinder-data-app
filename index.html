@@ -111,12 +111,9 @@
     </div>
 
     <script>
-        // 안전한 오류 감지 (화면에 표시)
+        // 전역 오류 감지기 (만약 화면이 멈추면 팝업으로 상세 원인을 띄워줌)
         window.onerror = function(msg, url, lineNo) {
-            var container = document.getElementById('memberListContainer');
-            if (container) {
-                container.innerHTML = '<div class="col-span-4 text-center text-red-600 py-6 text-xs font-bold bg-red-50 rounded-xl p-3">오류 발생 (' + lineNo + '):<br>' + msg + '</div>';
-            }
+            alert("스크립트 오류가 발생했습니다.\n에러: " + msg + "\n줄: " + lineNo);
             return false;
         };
 
@@ -157,7 +154,6 @@
             '태도': { text: 'text-amber-500', badgeBg: 'bg-amber-50 text-amber-600' }
         };
 
-        // 1자릿수 숫자를 2자릿수로 폼에 맞게 설정 (구형 기기 호환)
         function pad2(num) {
             return num < 10 ? '0' + num : String(num);
         }
@@ -221,8 +217,11 @@
         function toggleSettings() {
             var panel = document.getElementById('settingsPanel');
             if (panel) {
-                if (panel.classList.contains('hidden')) panel.classList.remove('hidden');
-                else panel.classList.add('hidden');
+                if (panel.className.indexOf('hidden') !== -1) {
+                    panel.className = panel.className.replace(' hidden', '');
+                } else {
+                    panel.className += ' hidden';
+                }
             }
         }
 
@@ -232,7 +231,9 @@
             if (!url) { alert('URL을 입력해주세요.'); return; }
             safeStorage.setItem('GAS_URL', url);
             var panel = document.getElementById('settingsPanel');
-            if (panel) panel.classList.add('hidden');
+            if (panel && panel.className.indexOf('hidden') === -1) {
+                panel.className += ' hidden';
+            }
             loadMembers();
         }
 
@@ -240,15 +241,13 @@
             var prevMode = currentMode;
             currentMode = mode;
 
-            // 상단 네비게이션 아이콘 활성화/비활성화 처리
             var navIds = ['navAttendance', 'navActivity', 'navRanking', 'navSettings'];
-            navIds.forEach(function(id) {
-                var el = document.getElementById(id);
+            for (var i = 0; i < navIds.length; i++) {
+                var el = document.getElementById(navIds[i]);
                 if (el) {
-                    el.classList.remove('nav-active');
-                    el.classList.add('nav-inactive');
+                    el.className = el.className.replace('nav-active', 'nav-inactive');
                 }
-            });
+            }
 
             var activeEl = null;
             if (mode === 'attendance') activeEl = document.getElementById('navAttendance');
@@ -256,46 +255,43 @@
             if (mode === 'ranking') activeEl = document.getElementById('navRanking');
             
             if (activeEl) {
-                activeEl.classList.remove('nav-inactive');
-                activeEl.classList.add('nav-active');
+                activeEl.className = activeEl.className.replace('nav-inactive', 'nav-active');
             }
 
-            // 영역 숨김/표시 처리
             var dateCont = document.getElementById('dateInputContainer');
             var rankCont = document.getElementById('rankingPeriodContainer');
             var catCont = document.getElementById('categoryContainer');
             var footer = document.getElementById('footerBar');
 
             if (dateCont) {
-                if (mode === 'ranking') dateCont.classList.add('hidden');
-                else dateCont.classList.remove('hidden');
-            }
-            if (rankCont) {
-                if (mode !== 'ranking') rankCont.classList.add('hidden');
-                else rankCont.classList.remove('hidden');
+                if (mode === 'ranking' && dateCont.className.indexOf('hidden') === -1) dateCont.className += ' hidden';
+                if (mode !== 'ranking') dateCont.className = dateCont.className.replace(' hidden', '');
             }
             
-            // ★ 수정됨: 칭찬 탭으로 이동할 때 카테고리(항목) 버튼을 보이도록 하고 렌더링
+            if (rankCont) {
+                if (mode !== 'ranking' && rankCont.className.indexOf('hidden') === -1) rankCont.className += ' hidden';
+                if (mode === 'ranking') rankCont.className = rankCont.className.replace(' hidden', '');
+            }
+            
             if (catCont) {
-                if (mode !== 'activity') {
-                    catCont.classList.add('hidden');
-                } else {
-                    catCont.classList.remove('hidden');
+                if (mode !== 'activity' && catCont.className.indexOf('hidden') === -1) {
+                    catCont.className += ' hidden';
+                } else if (mode === 'activity') {
+                    catCont.className = catCont.className.replace(' hidden', '');
                     renderCategoryButtons(); 
                 }
             }
             
             if (footer) {
-                if (mode === 'ranking') {
-                    footer.classList.add('translate-y-full');
-                    document.body.classList.remove('pb-24');
-                } else {
-                    footer.classList.remove('translate-y-full');
-                    document.body.classList.add('pb-24');
+                if (mode === 'ranking' && footer.className.indexOf('translate-y-full') === -1) {
+                    footer.className += ' translate-y-full';
+                    document.body.className = document.body.className.replace(' pb-24', '');
+                } else if (mode !== 'ranking') {
+                    footer.className = footer.className.replace(' translate-y-full', '');
+                    if (document.body.className.indexOf('pb-24') === -1) document.body.className += ' pb-24';
                 }
             }
 
-            // ★ 수정됨: 순위(기간 데이터) ↔ 출석/칭찬(하루 데이터) 간 이동 시 무조건 데이터를 다시 불러옴
             var isNowRanking = (mode === 'ranking');
             var wasRanking = (prevMode === 'ranking');
 
@@ -309,10 +305,12 @@
         }
 
         function updateSortButtonsUI() {
-            ['sortNameAsc', 'sortNameDesc', 'sortIdAsc', 'sortIdDesc', 'sortCustom'].forEach(function(id) {
-                var btn = document.getElementById(id);
+            var btnIds = ['sortNameAsc', 'sortNameDesc', 'sortIdAsc', 'sortIdDesc', 'sortCustom'];
+            for (var i = 0; i < btnIds.length; i++) {
+                var btn = document.getElementById(btnIds[i]);
                 if (btn) btn.className = "py-1.5 text-[10px] font-bold rounded-lg bg-gray-100 text-gray-600";
-            });
+            }
+            
             var customBtn = document.getElementById('sortCustom');
             if (customBtn) customBtn.innerText = "Custom";
 
@@ -326,4 +324,159 @@
                 if (currentSort === 'name_desc') document.getElementById('sortNameDesc').className = "py-1.5 text-[10px] font-bold rounded-lg bg-blue-600 text-white shadow-sm";
                 if (currentSort === 'id_asc') document.getElementById('sortIdAsc').className = "py-1.5 text-[10px] font-bold rounded-lg bg-blue-600 text-white shadow-sm";
                 if (currentSort === 'id_desc') document.getElementById('sortIdDesc').className = "py-1.5 text-[10px] font-bold rounded-lg bg-blue-600 text-white shadow-sm";
-                if (currentSort === 'custom') document
+                if (currentSort === 'custom') document.getElementById('sortCustom').className = "py-1.5 text-[10px] font-bold rounded-lg bg-blue-600 text-white shadow-sm";
+            }
+        }
+
+        function setSort(sortType) {
+            isCustomSorting = false;
+            currentSort = sortType;
+            safeStorage.setItem('PATHFINDER_SORT_MODE', sortType);
+            updateSortButtonsUI();
+            applySorting();
+            filterMembers();
+        }
+
+        function toggleCustomSort() {
+            isCustomSorting = !isCustomSorting;
+            if (isCustomSorting) {
+                currentSort = 'custom';
+                safeStorage.setItem('PATHFINDER_SORT_MODE', 'custom');
+            }
+            updateSortButtonsUI();
+            applySorting();
+            filterMembers();
+        }
+
+        function moveMember(uniqueId, direction) {
+            var currentIndex = -1;
+            for (var i = 0; i < members.length; i++) {
+                if (members[i]._uniqueIndex === uniqueId) { currentIndex = i; break; }
+            }
+            if (currentIndex === -1) return;
+            
+            var targetIndex = currentIndex + direction;
+            if (targetIndex < 0 || targetIndex >= members.length) return;
+
+            var temp = members[currentIndex];
+            members[currentIndex] = members[targetIndex];
+            members[targetIndex] = temp;
+
+            var orderKeys = [];
+            for (var k = 0; k < members.length; k++) {
+                orderKeys.push(getMemberUniqueKey(members[k]));
+            }
+            safeStorage.setItem('PATHFINDER_CUSTOM_ORDER_V2', JSON.stringify(orderKeys));
+            filterMembers();
+        }
+
+        function toggleAttendanceCard(uniqueId) {
+            if (isCustomSorting || currentMode === 'ranking') return;
+            var member = null;
+            for (var i = 0; i < members.length; i++) {
+                if (members[i]._uniqueIndex === uniqueId) { member = members[i]; break; }
+            }
+            if (!member || member.attendanceStatus === '출석') return;
+            member.attendanceChecked = !member.attendanceChecked;
+            filterMembers();
+        }
+
+        function toggleActivityCard(uniqueId) {
+            if (isCustomSorting || currentMode === 'ranking') return;
+            var member = null;
+            for (var i = 0; i < members.length; i++) {
+                if (members[i]._uniqueIndex === uniqueId) { member = members[i]; break; }
+            }
+            if (!member) return;
+            if (!member.tempActivityCounts) member.tempActivityCounts = {};
+            var currentVal = member.tempActivityCounts[currentCategory] || 0;
+            member.tempActivityCounts[currentCategory] = currentVal + 1;
+            filterMembers();
+        }
+
+        function changeActivityCount(uniqueId, delta) {
+            var member = null;
+            for (var i = 0; i < members.length; i++) {
+                if (members[i]._uniqueIndex === uniqueId) { member = members[i]; break; }
+            }
+            if (!member) return;
+            if (!member.tempActivityCounts) member.tempActivityCounts = {};
+            var currentTemp = member.tempActivityCounts[currentCategory] || 0;
+            if (currentTemp + delta < 0) return;
+            member.tempActivityCounts[currentCategory] = currentTemp + delta;
+            filterMembers();
+        }
+
+        function renderCategoryButtons() {
+            var container = document.getElementById('categoryButtons');
+            if (!container) return;
+            container.innerHTML = '';
+            for (var i = 0; i < categories.length; i++) {
+                (function(cat) {
+                    var btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.innerText = cat;
+                    if (cat === currentCategory) {
+                        btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white shadow-sm';
+                    } else {
+                        btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-600 hover:bg-gray-200';
+                    }
+                    btn.onclick = function() {
+                        currentCategory = cat;
+                        renderCategoryButtons();
+                        filterMembers();
+                    };
+                    container.appendChild(btn);
+                })(categories[i]);
+            }
+            var addBtn = document.createElement('button');
+            addBtn.type = 'button';
+            addBtn.innerText = '+ 추가';
+            addBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100';
+            addBtn.onclick = addNewCategory;
+            container.appendChild(addBtn);
+        }
+
+        function addNewCategory() {
+            var newCat = prompt('추가할 새로운 칭찬 항목 이름을 입력하세요:');
+            if (newCat && newCat.trim() !== '') {
+                var trimmed = newCat.trim();
+                var exists = false;
+                for (var i = 0; i < categories.length; i++) {
+                    if (categories[i] === trimmed) { exists = true; break; }
+                }
+                if (!exists) {
+                    categories.push(trimmed);
+                    safeStorage.setItem('PATHFINDER_CATS', JSON.stringify(categories));
+                    currentCategory = trimmed;
+                    renderCategoryButtons();
+                    filterMembers();
+                } else {
+                    alert('이미 존재하는 항목입니다.');
+                }
+            }
+        }
+
+        // ES6(fetch) 완전히 배제하고 100% 동작하는 구식 통신(XMLHttpRequest) 적용
+        function loadMembers() {
+            var url = safeStorage.getItem('GAS_URL') || DEFAULT_GAS_URL;
+            var container = document.getElementById('memberListContainer');
+
+            if (!url || url.trim() === '') {
+                var panel = document.getElementById('settingsPanel');
+                if (panel && panel.className.indexOf('hidden') !== -1) panel.className = panel.className.replace(' hidden', '');
+                if (container) {
+                    container.innerHTML = '<div class="col-span-4 text-center text-gray-600 py-8 text-sm font-bold bg-amber-50 border border-amber-200 rounded-xl p-4">👆 우측 상단 ⚙️(설정) 아이콘을 누르고 웹 앱 URL을 입력해주세요.</div>';
+                }
+                return;
+            }
+            
+            if (container) {
+                container.innerHTML = '<div class="col-span-4 text-center text-blue-500 py-10 text-sm font-bold animate-pulse">데이터를 서버에서 불러오는 중입니다...</div>';
+            }
+
+            var sep = url.indexOf('?') === -1 ? '?' : '&';
+            var queryUrl = url + sep;
+            
+            if (currentMode === 'ranking') {
+                var sDate = document.getElementById('rankStartDate
