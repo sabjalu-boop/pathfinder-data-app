@@ -9,22 +9,34 @@
     <meta name="apple-mobile-web-app-title" content="CS패스파인더">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* 네비게이션 아이콘 전환 효과용 */
-        .nav-icon { transition: all 0.2s ease-in-out; }
-        .nav-active { opacity: 1; transform: scale(1.2); filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3)); }
-        .nav-inactive { opacity: 0.5; filter: grayscale(100%); }
+        /* 네비게이션 SVG 아이콘 전환 효과 */
+        .nav-icon { transition: all 0.2s ease-in-out; display: flex; align-items: center; justify-content: center; }
+        .nav-active { opacity: 1; transform: scale(1.15); filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3)); color: #ffffff; }
+        .nav-inactive { opacity: 0.5; color: #e2e8f0; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 pb-24">
 
-    <!-- 상단 헤더 및 아이콘 네비게이션 -->
+    <!-- 상단 헤더 및 깔끔한 SVG 아이콘 네비게이션 -->
     <header class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-20 flex justify-between items-center">
         <h1 class="text-lg font-bold">CS패스파인더</h1>
-        <div class="flex space-x-5 text-2xl items-center">
-            <button type="button" id="navAttendance" class="nav-icon nav-active" title="출석">📋</button>
-            <button type="button" id="navActivity" class="nav-icon nav-inactive" title="칭찬">❤️</button>
-            <button type="button" id="navRanking" class="nav-icon nav-inactive" title="순위">🏆</button>
-            <button type="button" id="navSettings" class="nav-icon nav-inactive text-[22px]" title="설정">⚙️</button>
+        <div class="flex space-x-4 items-center pr-1">
+            <!-- 출석표 아이콘 -->
+            <button type="button" id="navAttendance" class="nav-icon nav-active p-1" title="출석">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+            </button>
+            <!-- 칭찬 하트 아이콘 -->
+            <button type="button" id="navActivity" class="nav-icon nav-inactive p-1" title="칭찬">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+            </button>
+            <!-- 순위 트로피 아이콘 -->
+            <button type="button" id="navRanking" class="nav-icon nav-inactive p-1" title="순위">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 4h2a2 2 0 012 2v1a3 3 0 01-3 3h-1M8 4H6a2 2 0 00-2 2v1a3 3 0 003 3h1M12 14v7m-4 0h8m-8-17h8v7a4 4 0 01-8 0V4z"></path></svg>
+            </button>
+            <!-- 설정 톱니바퀴 아이콘 -->
+            <button type="button" id="navSettings" class="nav-icon nav-inactive p-1" title="설정">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            </button>
         </div>
     </header>
 
@@ -214,4 +226,644 @@
 
         function saveUrl() {
             var input = document.getElementById('scriptUrl');
-            var url = input ? input
+            var url = input ? input.value.trim() : '';
+            if (!url) { alert('URL을 입력해주세요.'); return; }
+            safeStorage.setItem('GAS_URL', url);
+            var panel = document.getElementById('settingsPanel');
+            if (panel) panel.classList.add('hidden');
+            loadMembers();
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+
+            var navIds = ['navAttendance', 'navActivity', 'navRanking', 'navSettings'];
+            navIds.forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) {
+                    el.classList.remove('nav-active');
+                    el.classList.add('nav-inactive');
+                }
+            });
+
+            var activeEl = null;
+            if (mode === 'attendance') activeEl = document.getElementById('navAttendance');
+            if (mode === 'activity') activeEl = document.getElementById('navActivity');
+            if (mode === 'ranking') activeEl = document.getElementById('navRanking');
+            
+            if (activeEl) {
+                activeEl.classList.remove('nav-inactive');
+                activeEl.classList.add('nav-active');
+            }
+
+            var dateCont = document.getElementById('dateInputContainer');
+            var rankCont = document.getElementById('rankingPeriodContainer');
+            var catCont = document.getElementById('categoryContainer');
+            var footer = document.getElementById('footerBar');
+
+            if (dateCont) {
+                if (mode === 'ranking') dateCont.classList.add('hidden');
+                else dateCont.classList.remove('hidden');
+            }
+            if (rankCont) {
+                if (mode !== 'ranking') rankCont.classList.add('hidden');
+                else rankCont.classList.remove('hidden');
+            }
+            if (catCont) {
+                if (mode !== 'activity') catCont.classList.add('hidden');
+                else catCont.classList.remove('hidden');
+            }
+            if (footer) {
+                if (mode === 'ranking') {
+                    footer.classList.add('translate-y-full');
+                    document.body.classList.remove('pb-24');
+                } else {
+                    footer.classList.remove('translate-y-full');
+                    document.body.classList.add('pb-24');
+                }
+            }
+
+            if (mode === 'ranking') {
+                loadMembers(); 
+            } else {
+                updateSortButtonsUI();
+                applySorting();
+                filterMembers();
+            }
+        }
+
+        function updateSortButtonsUI() {
+            ['sortNameAsc', 'sortNameDesc', 'sortIdAsc', 'sortIdDesc', 'sortCustom'].forEach(function(id) {
+                var btn = document.getElementById(id);
+                if (btn) btn.className = "py-1.5 text-[10px] font-bold rounded-lg bg-gray-100 text-gray-600";
+            });
+            var customBtn = document.getElementById('sortCustom');
+            if (customBtn) customBtn.innerText = "Custom";
+
+            if (isCustomSorting) {
+                if (customBtn) {
+                    customBtn.innerText = "완료";
+                    customBtn.className = "py-1.5 text-[10px] font-bold rounded-lg bg-amber-500 text-white shadow-sm animate-pulse";
+                }
+            } else {
+                if (currentSort === 'name_asc') document.getElementById('sortNameAsc').className = "py-1.5 text-[10px] font-bold rounded-lg bg-blue-600 text-white shadow-sm";
+                if (currentSort === 'name_desc') document.getElementById('sortNameDesc').className = "py-1.5 text-[10px] font-bold rounded-lg bg-blue-600 text-white shadow-sm";
+                if (currentSort === 'id_asc') document.getElementById('sortIdAsc').className = "py-1.5 text-[10px] font-bold rounded-lg bg-blue-600 text-white shadow-sm";
+                if (currentSort === 'id_desc') document.getElementById('sortIdDesc').className = "py-1.5 text-[10px] font-bold rounded-lg bg-blue-600 text-white shadow-sm";
+                if (currentSort === 'custom') document.getElementById('sortCustom').className = "py-1.5 text-[10px] font-bold rounded-lg bg-blue-600 text-white shadow-sm";
+            }
+        }
+
+        function setSort(sortType) {
+            isCustomSorting = false;
+            currentSort = sortType;
+            safeStorage.setItem('PATHFINDER_SORT_MODE', sortType);
+            updateSortButtonsUI();
+            applySorting();
+            filterMembers();
+        }
+
+        function toggleCustomSort() {
+            isCustomSorting = !isCustomSorting;
+            if (isCustomSorting) {
+                currentSort = 'custom';
+                safeStorage.setItem('PATHFINDER_SORT_MODE', 'custom');
+            }
+            updateSortButtonsUI();
+            applySorting();
+            filterMembers();
+        }
+
+        function moveMember(uniqueId, direction) {
+            var currentIndex = -1;
+            for (var i = 0; i < members.length; i++) {
+                if (members[i]._uniqueIndex === uniqueId) { currentIndex = i; break; }
+            }
+            if (currentIndex === -1) return;
+            
+            var targetIndex = currentIndex + direction;
+            if (targetIndex < 0 || targetIndex >= members.length) return;
+
+            var temp = members[currentIndex];
+            members[currentIndex] = members[targetIndex];
+            members[targetIndex] = temp;
+
+            var orderKeys = [];
+            for (var k = 0; k < members.length; k++) {
+                orderKeys.push(getMemberUniqueKey(members[k]));
+            }
+            safeStorage.setItem('PATHFINDER_CUSTOM_ORDER_V2', JSON.stringify(orderKeys));
+            filterMembers();
+        }
+
+        function toggleAttendanceCard(uniqueId) {
+            if (isCustomSorting || currentMode === 'ranking') return;
+            var member = null;
+            for (var i = 0; i < members.length; i++) {
+                if (members[i]._uniqueIndex === uniqueId) { member = members[i]; break; }
+            }
+            if (!member || member.attendanceStatus === '출석') return;
+            member.attendanceChecked = !member.attendanceChecked;
+            filterMembers();
+        }
+
+        function toggleActivityCard(uniqueId) {
+            if (isCustomSorting || currentMode === 'ranking') return;
+            var member = null;
+            for (var i = 0; i < members.length; i++) {
+                if (members[i]._uniqueIndex === uniqueId) { member = members[i]; break; }
+            }
+            if (!member) return;
+            if (!member.tempActivityCounts) member.tempActivityCounts = {};
+            var currentVal = member.tempActivityCounts[currentCategory] || 0;
+            member.tempActivityCounts[currentCategory] = currentVal + 1;
+            filterMembers();
+        }
+
+        function changeActivityCount(uniqueId, delta) {
+            var member = null;
+            for (var i = 0; i < members.length; i++) {
+                if (members[i]._uniqueIndex === uniqueId) { member = members[i]; break; }
+            }
+            if (!member) return;
+            if (!member.tempActivityCounts) member.tempActivityCounts = {};
+            var currentTemp = member.tempActivityCounts[currentCategory] || 0;
+            if (currentTemp + delta < 0) return;
+            member.tempActivityCounts[currentCategory] = currentTemp + delta;
+            filterMembers();
+        }
+
+        function renderCategoryButtons() {
+            var container = document.getElementById('categoryButtons');
+            if (!container) return;
+            container.innerHTML = '';
+            categories.forEach(function(cat) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.innerText = cat;
+                if (cat === currentCategory) {
+                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white shadow-sm';
+                } else {
+                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-600 hover:bg-gray-200';
+                }
+                btn.onclick = function() {
+                    currentCategory = cat;
+                    renderCategoryButtons();
+                    filterMembers();
+                };
+                container.appendChild(btn);
+            });
+            var addBtn = document.createElement('button');
+            addBtn.type = 'button';
+            addBtn.innerText = '+ 추가';
+            addBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100';
+            addBtn.onclick = addNewCategory;
+            container.appendChild(addBtn);
+        }
+
+        function addNewCategory() {
+            var newCat = prompt('추가할 새로운 칭찬 항목 이름을 입력하세요:');
+            if (newCat && newCat.trim() !== '') {
+                var trimmed = newCat.trim();
+                var exists = false;
+                for (var i = 0; i < categories.length; i++) {
+                    if (categories[i] === trimmed) { exists = true; break; }
+                }
+                if (!exists) {
+                    categories.push(trimmed);
+                    safeStorage.setItem('PATHFINDER_CATS', JSON.stringify(categories));
+                    currentCategory = trimmed;
+                    renderCategoryButtons();
+                    filterMembers();
+                } else {
+                    alert('이미 존재하는 항목입니다.');
+                }
+            }
+        }
+
+        // ES5 호환 Promise (구형 기기에서 async/await 문법 에러 차단)
+        function loadMembers() {
+            var url = safeStorage.getItem('GAS_URL') || DEFAULT_GAS_URL;
+            var container = document.getElementById('memberListContainer');
+
+            if (!url || url.trim() === '') {
+                var panel = document.getElementById('settingsPanel');
+                if (panel) panel.classList.remove('hidden');
+                if (container) {
+                    container.innerHTML = '<div class="col-span-4 text-center text-gray-600 py-8 text-sm font-bold bg-amber-50 border border-amber-200 rounded-xl p-4">👆 우측 상단 ⚙️(설정) 아이콘을 누르고 웹 앱 URL을 입력해주세요.</div>';
+                }
+                return;
+            }
+            
+            if (container) {
+                container.innerHTML = '<div class="col-span-4 text-center text-blue-500 py-10 text-sm font-bold animate-pulse">데이터를 서버에서 불러오는 중입니다...</div>';
+            }
+
+            var sep = url.indexOf('?') === -1 ? '?' : '&';
+            var queryUrl = url + sep;
+            
+            if (currentMode === 'ranking') {
+                var sDate = document.getElementById('rankStartDate').value;
+                var eDate = document.getElementById('rankEndDate').value;
+                queryUrl += 'startDate=' + encodeURIComponent(sDate) + '&endDate=' + encodeURIComponent(eDate) + '&mode=ranking';
+            } else {
+                var recordDate = getCheckedDate();
+                queryUrl += 'date=' + encodeURIComponent(recordDate);
+            }
+
+            fetch(queryUrl)
+                .then(function(response) {
+                    if (!response.ok) throw new Error('상태코드: ' + response.status);
+                    return response.json();
+                })
+                .then(function(rawData) {
+                    if (Array.isArray(rawData)) members = rawData;
+                    else if (rawData && Array.isArray(rawData.members)) members = rawData.members;
+                    else if (rawData && Array.isArray(rawData.data)) members = rawData.data;
+                    else members = [];
+                    
+                    if (members.length === 0) {
+                        container.innerHTML = '<div class="col-span-4 text-center text-gray-400 py-10 text-sm">조건에 맞는 데이터가 없습니다.</div>';
+                        return;
+                    }
+
+                    members.forEach(function(m, idx) {
+                        m._uniqueIndex = idx;
+                        var foundName = m['이름'] || m['성명'] || m['대원이름'] || m['대원명'] || m['name'] || m['Name'] || '';
+                        var foundId = m['회원ID'] || m['ID'] || m['id'] || m['대원ID'] || m['번호'] || '';
+                        
+                        if (!foundName) {
+                            var keys = Object.keys(m);
+                            for (var k = 0; k < keys.length; k++) {
+                                if (keys[k].indexOf('이름') !== -1 || keys[k].toLowerCase().indexOf('name') !== -1) {
+                                    foundName = m[keys[k]]; break;
+                                }
+                            }
+                        }
+
+                        m.이름 = String(foundName).trim();
+                        m.회원ID = String(foundId).trim();
+                        m.attendanceChecked = (m.attendanceStatus === '출석');
+                        if (!m.tempActivityCounts) m.tempActivityCounts = {};
+
+                        m.attendanceCount = m.attendanceCount || m.출석수 || m.출석횟수 || 0;
+                        m.activityCount = m.activityCount || m.칭찬수 || m.칭찬합계 || 0;
+                        m.totalSessions = m.totalSessions || m.총모임 || m.총횟수 || 0;
+                    });
+
+                    updateSortButtonsUI();
+                    applySorting();
+                    filterMembers();
+                })
+                .catch(function(error) {
+                    if (container) {
+                        container.innerHTML = '<div class="col-span-4 text-center text-red-500 py-10 text-sm font-bold">로드 실패: ' + error.message + '</div>';
+                    }
+                });
+        }
+
+        function applySorting() {
+            if (currentMode === 'ranking') {
+                var maxAct = 0;
+                var maxAtt = 0;
+                for (var i = 0; i < members.length; i++) {
+                    var act = parseInt(members[i].activityCount) || 0;
+                    var att = parseInt(members[i].attendanceCount) || 0;
+                    if (act > maxAct) maxAct = act;
+                    if (att > maxAtt) maxAtt = att;
+                }
+                if (maxAct === 0) maxAct = 1;
+
+                members.forEach(function(m) {
+                    var attCount = parseInt(m.attendanceCount) || 0;
+                    var actCount = parseInt(m.activityCount) || 0;
+                    var totSessions = parseInt(m.totalSessions) || (maxAtt > 0 ? maxAtt : 1);
+
+                    m.calcAttScore = (attCount / totSessions) * 60;
+                    if (m.calcAttScore > 60) m.calcAttScore = 60; 
+                    
+                    m.calcActScore = (actCount / maxAct) * 40;
+                    if (m.calcActScore > 40) m.calcActScore = 40;
+
+                    m.calcTotalScore = m.calcAttScore + m.calcActScore;
+                });
+
+                members.sort(function(a, b) {
+                    return b.calcTotalScore - a.calcTotalScore;
+                });
+                return;
+            }
+
+            if (currentSort === 'custom') {
+                var savedOrder = safeStorage.getItem('PATHFINDER_CUSTOM_ORDER_V2');
+                if (savedOrder) {
+                    try {
+                        var orderKeys = JSON.parse(savedOrder);
+                        members.sort(function(a, b) {
+                            var ia = orderKeys.indexOf(getMemberUniqueKey(a));
+                            var ib = orderKeys.indexOf(getMemberUniqueKey(b));
+                            if (ia === -1) ia = 9999;
+                            if (ib === -1) ib = 9999;
+                            return ia - ib;
+                        });
+                        return;
+                    } catch (e) {}
+                }
+            }
+
+            members.sort(function(a, b) {
+                if (currentSort === 'name_asc') {
+                    return String(a.이름 || '').localeCompare(String(b.이름 || ''));
+                } else if (currentSort === 'name_desc') {
+                    return String(b.이름 || '').localeCompare(String(a.이름 || ''));
+                } else if (currentSort === 'id_asc') {
+                    var cmpAsc = String(a.회원ID || '').localeCompare(String(b.회원ID || ''), undefined, {numeric: true});
+                    return cmpAsc !== 0 ? cmpAsc : String(a.이름 || '').localeCompare(String(b.이름 || ''));
+                } else if (currentSort === 'id_desc') {
+                    var cmpDesc = String(b.회원ID || '').localeCompare(String(a.회원ID || ''), undefined, {numeric: true});
+                    return cmpDesc !== 0 ? cmpDesc : String(a.이름 || '').localeCompare(String(b.이름 || ''));
+                }
+                return String(a.이름 || '').localeCompare(String(b.이름 || ''));
+            });
+        }
+
+        function filterMembers() {
+            var searchEl = document.getElementById('searchInput');
+            var keyword = searchEl ? searchEl.value.trim().toLowerCase() : '';
+            
+            var list = [];
+            for (var i = 0; i < members.length; i++) {
+                var mName = String(members[i].이름 || '').toLowerCase();
+                var mId = String(members[i].회원ID || '').toLowerCase();
+                if (!keyword || mName.indexOf(keyword) !== -1 || mId.indexOf(keyword) !== -1) {
+                    list.push(members[i]);
+                }
+            }
+            renderMembers(list);
+        }
+
+        function renderMembers(list) {
+            var container = document.getElementById('memberListContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (list.length === 0) {
+                if (members.length === 0) {
+                    container.innerHTML = '<div class="col-span-4 text-center text-gray-400 py-10 text-sm">조건에 맞는 명단이 없습니다.</div>';
+                } else {
+                    container.innerHTML = '<div class="col-span-4 text-center text-gray-400 py-10 text-sm">검색된 회원이 없습니다.</div>';
+                }
+                return;
+            }
+
+            list.forEach(function(m, renderIdx) {
+                var uniqueId = m._uniqueIndex;
+                var tile = document.createElement('div');
+                tile.style.position = 'relative';
+
+                var subTextHtml = '';
+                var tileClass = 'bg-white border border-gray-200 p-2 rounded-xl flex flex-col items-center justify-between text-center shadow-sm h-24 select-none';
+
+                if (currentMode === 'ranking') {
+                    tileClass = 'bg-indigo-50 border-2 border-indigo-200 p-2 rounded-xl flex flex-col items-center justify-between text-center shadow-sm h-24 select-none';
+                    
+                    var rankNum = renderIdx + 1;
+                    var totalS = (m.calcTotalScore || 0).toFixed(1);
+                    var attS = (m.calcAttScore || 0).toFixed(1);
+                    var actS = (m.calcActScore || 0).toFixed(1);
+                    
+                    var rankBadge = '<div class="absolute -top-2 -left-2 bg-indigo-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-md">' + rankNum + '</div>';
+                    
+                    subTextHtml = rankBadge + 
+                        '<div class="flex flex-col items-center mt-1 w-full">' +
+                            '<span class="text-[11px] font-black text-indigo-700">' + totalS + '점</span>' +
+                            '<div class="flex space-x-1 mt-0.5 text-[9px] font-bold text-gray-500">' +
+                                '<span>출:' + attS + '</span>' +
+                                '<span>칭:' + actS + '</span>' +
+                            '</div>' +
+                        '</div>';
+                }
+                else if (isCustomSorting) {
+                    tileClass = 'bg-amber-50 border-2 border-amber-400 p-2 rounded-xl flex flex-col items-center justify-between text-center shadow-md h-24 select-none';
+                    subTextHtml = 
+                        '<div class="flex items-center justify-between w-full px-1">' +
+                            '<button type="button" onclick="event.stopPropagation(); moveMember(' + uniqueId + ', -1)" class="w-6 h-6 bg-white border text-gray-700 rounded text-xs font-bold shadow-sm flex items-center justify-center hover:bg-gray-100">◀</button>' +
+                            '<span class="text-[9px] font-bold text-amber-700">이동</span>' +
+                            '<button type="button" onclick="event.stopPropagation(); moveMember(' + uniqueId + ', 1)" class="w-6 h-6 bg-white border text-gray-700 rounded text-xs font-bold shadow-sm flex items-center justify-center hover:bg-gray-100">▶</button>' +
+                        '</div>';
+                } else if (currentMode === 'attendance') {
+                    var isAlreadyChecked = m.attendanceStatus === '출석';
+                    if (isAlreadyChecked) {
+                        tileClass = 'bg-gray-100 border border-gray-200 p-2 rounded-xl flex flex-col items-center justify-between text-center opacity-70 h-24 select-none';
+                        subTextHtml = '<span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold mt-1">출석완료</span>';
+                    } else {
+                        var isChecked = m.attendanceChecked;
+                        if (isChecked) {
+                            tileClass = 'bg-blue-50 border-2 border-blue-500 p-2 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer shadow-sm transition-all h-24 select-none';
+                            subTextHtml = '<span class="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-bold mt-1">출석 ✓</span>';
+                        } else {
+                            tileClass = 'bg-white border border-gray-200 p-2 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer hover:border-gray-300 shadow-sm transition-all h-24 select-none';
+                            subTextHtml = '<span class="text-[10px] text-gray-400 mt-1">미체크</span>';
+                        }
+                        tile.onclick = function() { toggleAttendanceCard(uniqueId); };
+                    }
+                } else if (currentMode === 'activity') {
+                    var tempCount = (m.tempActivityCounts && m.tempActivityCounts[currentCategory]) ? m.tempActivityCounts[currentCategory] : 0;
+                    var saved = (m.activityCounts && m.activityCounts[currentCategory]) || 0;
+                    var total = saved + tempCount;
+
+                    if (tempCount > 0) {
+                        tileClass = 'bg-blue-50 border-2 border-blue-500 p-2 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer shadow-sm transition-all h-24 select-none relative';
+                    } else {
+                        tileClass = 'bg-white border border-gray-200 p-2 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer hover:border-gray-300 shadow-sm transition-all h-24 select-none relative';
+                    }
+                    
+                    tile.onclick = function() { toggleActivityCard(uniqueId); };
+
+                    var heartsContainer = '';
+                    if (total > 0) {
+                        var style = getCategoryStyle(currentCategory);
+                        if (total <= 3) {
+                            var hearts = '';
+                            for (var h = 0; h < total; h++) {
+                                hearts += '<svg class="w-3 h-3 ' + style.text + ' inline-block" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
+                            }
+                            heartsContainer = '<div class="flex items-center justify-center mt-1">' + hearts + '</div>';
+                        } else {
+                            heartsContainer = '<div class="text-[10px] font-bold ' + style.text + ' mt-1">❤️ ' + total + '</div>';
+                        }
+                    } else {
+                        heartsContainer = '<span class="text-[10px] text-gray-400 mt-1">미체크</span>';
+                    }
+
+                    var minusBtn = '';
+                    if (tempCount > 0) {
+                        minusBtn = '<button type="button" onclick="event.stopPropagation(); changeActivityCount(' + uniqueId + ', -1)" class="absolute bottom-1.5 left-1.5 w-5 h-5 bg-white border border-gray-200 text-red-500 rounded text-xs font-bold flex items-center justify-center hover:bg-red-50 shadow-sm z-10">-</button>';
+                    }
+
+                    subTextHtml = 
+                        '<div class="w-full flex flex-col items-center pointer-events-none">' +
+                            heartsContainer +
+                            (tempCount > 0 ? '<span class="text-[9px] font-bold text-blue-600 mt-0.5">+' + tempCount + '</span>' : '') +
+                        '</div>' +
+                        minusBtn;
+                }
+
+                tile.className = tileClass;
+                
+                var topSpacing = (currentMode === 'ranking') ? 'mt-3' : 'mt-1';
+                tile.innerHTML = 
+                    '<div class="font-bold text-xs text-gray-800 truncate w-full px-1 pointer-events-none ' + topSpacing + '">' +
+                        (m.이름 || '이름 없음') +
+                    '</div>' +
+                    '<div class="text-[10px] text-gray-400 truncate w-full pointer-events-none">' + (m.회원ID || '') + '</div>' +
+                    subTextHtml;
+                container.appendChild(tile);
+            });
+        }
+
+        // ES5 호환 Promise (구형 기기 대응)
+        function submitData() {
+            var url = safeStorage.getItem('GAS_URL') || DEFAULT_GAS_URL;
+            if (!url) {
+                alert('먼저 상단 ⚙️(설정) 아이콘을 눌러 구글 스크립트 URL을 저장해주세요.');
+                return;
+            }
+            var recordDate = getCheckedDate();
+            var sep = url.indexOf('?') === -1 ? '?' : '&';
+            var queryUrl = url + sep + 'date=' + encodeURIComponent(recordDate);
+
+            if (currentMode === 'attendance') {
+                var records = [];
+                for (var i = 0; i < members.length; i++) {
+                    var m = members[i];
+                    if (m.attendanceStatus !== '출석' && m.attendanceChecked) {
+                        records.push({ memberId: m.회원ID, name: m.이름, status: '출석' });
+                    }
+                }
+                if (records.length === 0) {
+                    alert('새로 체크된 출석 인원이 없습니다.'); return;
+                }
+                queryUrl += '&action=attendance&records=' + encodeURIComponent(JSON.stringify(records));
+            } else if (currentMode === 'activity') {
+                var recordsAct = [];
+                for (var j = 0; j < members.length; j++) {
+                    var actM = members[j];
+                    var count = (actM.tempActivityCounts && actM.tempActivityCounts[currentCategory]) ? actM.tempActivityCounts[currentCategory] : 0;
+                    if (count !== 0) {
+                        recordsAct.push({ memberId: actM.회원ID, name: actM.이름, count: count });
+                    }
+                }
+                if (recordsAct.length === 0) {
+                    alert('[' + currentCategory + '] 항목에서 변경된 칭찬 스티커 내역이 없습니다.'); return;
+                }
+                queryUrl += '&action=activity&activityName=' + encodeURIComponent(currentCategory) + '&records=' + encodeURIComponent(JSON.stringify(recordsAct));
+            } else {
+                return; 
+            }
+
+            var btn = document.getElementById('btnSubmit');
+            if (btn) {
+                btn.innerText = '저장 중...';
+                btn.disabled = true;
+            }
+
+            function resetBtn() {
+                if (btn) {
+                    btn.innerText = '전송 및 저장하기';
+                    btn.disabled = false;
+                }
+            }
+
+            fetch(queryUrl)
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(result) {
+                    if (result.status === 'success') {
+                        alert('성공적으로 저장되었습니다!');
+                        members.forEach(function(m) { 
+                            if (currentMode === 'attendance' && m.attendanceChecked) {
+                                m.attendanceStatus = '출석';
+                            }
+                            if (currentMode === 'activity' && m.tempActivityCounts) {
+                                if (!m.activityCounts) m.activityCounts = {};
+                                if (m.tempActivityCounts[currentCategory]) {
+                                    m.activityCounts[currentCategory] = (m.activityCounts[currentCategory] || 0) + m.tempActivityCounts[currentCategory];
+                                    m.tempActivityCounts[currentCategory] = 0;
+                                }
+                            }
+                        });
+                        filterMembers();
+                    } else {
+                        alert('저장 실패: ' + (result.message || '알 수 없는 오류'));
+                    }
+                    resetBtn();
+                })
+                .catch(function(error) {
+                    alert('통신 중 오류가 발생했습니다: ' + error.message);
+                    resetBtn();
+                });
+        }
+
+        // 전체 초기화 및 시작
+        function bindEventsAndInit() {
+            initDates(); 
+
+            var elRecordDate = document.getElementById('recordDate');
+            if (elRecordDate) elRecordDate.onchange = loadMembers;
+            
+            var elNavAtt = document.getElementById('navAttendance');
+            if (elNavAtt) elNavAtt.onclick = function() { setMode('attendance'); };
+            
+            var elNavAct = document.getElementById('navActivity');
+            if (elNavAct) elNavAct.onclick = function() { setMode('activity'); };
+            
+            var elNavRank = document.getElementById('navRanking');
+            if (elNavRank) elNavRank.onclick = function() { setMode('ranking'); };
+            
+            var elNavSet = document.getElementById('navSettings');
+            if (elNavSet) elNavSet.onclick = toggleSettings;
+            
+            var elSaveUrl = document.getElementById('btnSaveUrl');
+            if (elSaveUrl) elSaveUrl.onclick = saveUrl;
+
+            var elApplyMonth = document.getElementById('btnApplyMonth');
+            if (elApplyMonth) elApplyMonth.onclick = applyRankMonth;
+
+            var elLoadRank = document.getElementById('btnLoadRank');
+            if (elLoadRank) elLoadRank.onclick = loadMembers;
+
+            var searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.oninput = filterMembers;
+                searchInput.onkeyup = filterMembers;
+            }
+
+            var sAsc = document.getElementById('sortNameAsc');
+            if (sAsc) sAsc.onclick = function() { setSort('name_asc'); };
+            var sDesc = document.getElementById('sortNameDesc');
+            if (sDesc) sDesc.onclick = function() { setSort('name_desc'); };
+            var sIdAsc = document.getElementById('sortIdAsc');
+            if (sIdAsc) sIdAsc.onclick = function() { setSort('id_asc'); };
+            var sIdDesc = document.getElementById('sortIdDesc');
+            if (sIdDesc) sIdDesc.onclick = function() { setSort('id_desc'); };
+            var sCustom = document.getElementById('sortCustom');
+            if (sCustom) sCustom.onclick = toggleCustomSort;
+
+            var btnSubmit = document.getElementById('btnSubmit');
+            if (btnSubmit) btnSubmit.onclick = submitData;
+
+            var savedUrl = safeStorage.getItem('GAS_URL') || DEFAULT_GAS_URL;
+            var urlInput = document.getElementById('scriptUrl');
+            if (savedUrl && urlInput) urlInput.value = savedUrl;
+            
+            setMode('attendance'); 
+        }
+
+        // 즉시 실행 (안정성 보장)
+        bindEventsAndInit();
+
+    </script>
+</body>
+</html>
