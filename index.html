@@ -233,7 +233,6 @@
                     return;
                 }
 
-                // 회원 데이터에 출석 체크 상태 메모리 초기화
                 members.forEach(m => {
                     m.attendanceChecked = (m.attendanceStatus === '출석');
                 });
@@ -280,7 +279,7 @@
                 });
             }
 
-            list.forEach((m, index) => {
+            list.forEach((m) => {
                 const originalIndex = members.findIndex(item => item.회원ID === m.회원ID);
                 const card = document.createElement('div');
                 card.className = 'bg-white p-4 rounded-xl shadow-sm flex items-center justify-between';
@@ -342,7 +341,8 @@
                         </div>
                     `;
                 } else if (currentMode === 'daily-rank') {
-                    const rankBadge = `<span class="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full font-bold mr-2">${index + 1}위</span>`;
+                    const rankIndex = list.indexOf(m) + 1;
+                    const rankBadge = `<span class="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full font-bold mr-2">${rankIndex}위</span>`;
                     const attBadge = m.attendanceStatus === '출석' ? '<span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">출석완료</span>' : '<span class="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">미출석</span>';
                     const scoreBadge = `<span class="text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full font-bold">당일 칭찬: ${m.dailyScore || 0}개</span>`;
 
@@ -354,7 +354,8 @@
                     `;
                     middleHtml = `<div class="flex items-center">${rankBadge}</div>`;
                 } else if (currentMode === 'overall-rank') {
-                    const rankBadge = `<span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded-full font-bold mr-2">${index + 1}위</span>`;
+                    const rankIndex = list.indexOf(m) + 1;
+                    const rankBadge = `<span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded-full font-bold mr-2">${rankIndex}위</span>`;
                     const rateBadge = `<span class="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-bold">출석률: ${m.attendanceRate || 0}%</span>`;
                     const totalScoreBadge = `<span class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold">전체 칭찬: ${m.overallScore || 0}개</span>`;
 
@@ -410,9 +411,15 @@
 
             if (currentMode === 'attendance') {
                 let records = [];
-                // DOM 요소를 읽는 대신 메모리에 저장된 attendanceChecked 상태를 직접 참조
-                members.forEach((m) => {
+                
+                // 저장 버튼을 누르는 순간 화면의 실제 체크박스 상태와 메모리를 모두 검사
+                members.forEach((m, originalIndex) => {
                     if (m.attendanceStatus === '출석') return; 
+
+                    const checkbox = document.getElementById(`att_${originalIndex}`);
+                    if (checkbox && checkbox.checked) {
+                        m.attendanceChecked = true;
+                    }
 
                     if (m.attendanceChecked) {
                         records.push({
