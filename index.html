@@ -17,7 +17,10 @@
     <!-- 상단 헤더 -->
     <header class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
         <h1 class="text-lg font-bold">CS패스파인더</h1>
-        <button onclick="toggleSettings()" class="text-sm bg-blue-700 px-3 py-1 rounded-lg">설정</button>
+        <div class="space-x-1">
+            <button onclick="loadMembers()" class="text-xs bg-blue-700 px-2.5 py-1.5 rounded-lg">새로고침</button>
+            <button onclick="toggleSettings()" class="text-xs bg-blue-700 px-2.5 py-1.5 rounded-lg">설정</button>
+        </div>
     </header>
 
     <div class="max-w-md mx-auto p-4">
@@ -57,7 +60,7 @@
 
         <!-- 회원 목록 영역 -->
         <div id="memberListContainer" class="space-y-3">
-            <div class="text-center text-gray-400 py-10 text-sm">회원 명부를 불러오는 중...</div>
+            <div class="text-center text-gray-400 py-10 text-sm">데이터를 불러오는 중입니다...</div>
         </div>
 
     </div>
@@ -74,12 +77,14 @@
         window.onload = function() {
             // 오늘 날짜 자동 세팅
             const today = new Date().toISOString().split('T')[0];
-            document.getElementById('recordDate').value = today;
+            const dateInput = document.getElementById('recordDate');
+            if (dateInput) dateInput.value = today;
 
             const savedUrl = localStorage.getItem('GAS_URL');
             if (savedUrl) {
                 document.getElementById('scriptUrl').value = savedUrl;
-                loadMembers(); // URL이 있으면 자동 로드!
+                // 약간의 여유를 두고 데이터 로드 (멈춤 현상 방지)
+                setTimeout(loadMembers, 100);
             } else {
                 document.getElementById('settingsPanel').classList.remove('hidden');
                 document.getElementById('memberListContainer').innerHTML = '<div class="text-center text-gray-400 py-10 text-sm">우측 상단 [설정]에서 구글 스크립트 URL을 입력해주세요.</div>';
@@ -99,7 +104,7 @@
             }
             localStorage.setItem('GAS_URL', url);
             alert('저장되었습니다!');
-            location.reload(); // 새로고침하여 자동 로드 실행
+            location.reload();
         }
 
         function setMode(mode) {
@@ -134,23 +139,24 @@
 
             try {
                 const response = await fetch(url);
+                if (!response.ok) throw new Error('서버 응답이 올바르지 않습니다.');
                 members = await response.json();
                 
-                if (members.length === 0) {
-                    container.innerHTML = '<div class="text-center text-gray-400 py-10 text-sm">등록된 회원이 없습니다. 구글 시트를 확인해주세요.</div>';
+                if (!Array.isArray(members) || members.length === 0) {
+                    container.innerHTML = '<div class="text-center text-gray-400 py-10 text-sm">등록된 회원이 없거나 데이터 형식 오류입니다. 구글 시트를 확인해주세요.</div>';
                     return;
                 }
 
                 renderMembers(members);
             } catch (error) {
-                alert('회원 명부를 불러오는데 실패했습니다: ' + error);
-                container.innerHTML = '<div class="text-center text-red-400 py-10 text-sm">로드 실패. URL을 확인해주세요.</div>';
+                console.error(error);
+                container.innerHTML = `<div class="text-center text-red-400 py-10 text-sm">로드 실패: ${error.message}<br>우측 상단 [설정]에서 URL을 확인하거나 [새로고침]을 눌러주세요.</div>`;
             }
         }
 
         function filterMembers() {
             const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
-            const filtered = members.filter(m => m.이름.toLowerCase().includes(keyword));
+            const filtered = members.filter(m => m.이름 && m.이름.toLowerCase().includes(keyword));
             renderMembers(filtered);
         }
 
@@ -182,4 +188,98 @@
                 } else {
                     const count = m.activityCount || 0;
                     controlHtml = `
-                        <div class="flex items-
+                        <div class="flex items-center space-x-2">
+                            <button type="button" onclick="adjustCount(${originalIndex}, -1)" class="w-8 h-8 bg-gray-100 rounded-lg font-bold text-gray-600">-</button>
+                            <span id="cnt_${originalIndex}" class="w-8 text-center font-bold">${count}</span>
+                            <button type="button" onclick="adjustCount(${originalIndex}, 1)" class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg font-bold">+</button>
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div>
+                        <div class="font-bold text-gray-800">${m.이름 || '이름 없음'}</div>
+                        <div class="text-xs text-gray-400">${m.회원ID || ''}</div>
+                    </div>
+                    ${controlHtml}
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function adjustCount(index, delta) {
+            if (!members[index].activityCount) members[index].activityCount = 0;
+            members[index].activityCount += delta;
+            if (members[index].activityCount < 0) members[index].activityCount = 0;
+            const cntSpan = document.getElementById(`cnt_${index}`);
+            if (cntSpan) cntSpan.innerText = members[index].activityCount;
+        }
+
+        async function submitData() {
+            const url = localStorage.getItem('GAS_URL');
+            const customDate = document.getElementById('recordDate').value;
+            let payload = {};
+
+            if (!customDate) {
+                alert('체크할 날짜를 선택해주세요.');
+                return;
+            }
+
+            if (currentMode === 'attendance') {
+                let records = [];
+                members.forEach((m, index) => {
+                    const checkbox = document.getElementById(`att_${index}`);
+                    const isChecked = checkbox ? checkbox.checked : false;
+                    records.push({
+                        memberId: m.회원ID,
+                        name: m.이름,
+                        status: isChecked ? '출석' : '결석',
+                        date: customDate
+                    });
+                });
+                payload = { type: 'attendance', records: records };
+            } else {
+                const activityNameInput = document.getElementById('activityName');
+                const activityName = activityNameInput ? activityNameInput.value.trim() : '';
+                if (!activityName) {
+                    alert('활동 항목명을 입력해주세요.');
+                    return;
+                }
+                let records = [];
+                members.forEach((m, index) => {
+                    const count = m.activityCount || 0;
+                    if (count > 0) {
+                        records.push({
+                            memberId: m.회원ID,
+                            name: m.이름,
+                            activityName: activityName,
+                            count: count,
+                            date: customDate
+                        });
+                    }
+                });
+                if (records.length === 0) {
+                    alert('카운트가 0보다 큰 회원이 없습니다.');
+                    return;
+                }
+                payload = { type: 'activity', records: records };
+            }
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    alert('성공적으로 저장되었습니다!');
+                } else {
+                    alert('저장 실패: ' + (result.message || '알 수 없는 오류'));
+                }
+            } catch (error) {
+                alert('통신 중 오류가 발생했습니다: ' + error);
+            }
+        }
+    </script>
+</body>
+</html>
