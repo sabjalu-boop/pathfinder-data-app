@@ -111,25 +111,38 @@
     </div>
 
     <script>
-        // 전역 오류 감지기 (만약 화면이 멈추면 팝업으로 상세 원인을 띄워줌)
-        window.onerror = function(msg, url, lineNo) {
-            alert("스크립트 오류가 발생했습니다.\n에러: " + msg + "\n줄: " + lineNo);
+        // 1. 강제 즉시 실행 확인 (캐시가 아니라면 무조건 텍스트가 바뀝니다)
+        var initContainer = document.getElementById('memberListContainer');
+        if (initContainer) {
+            initContainer.innerHTML = '<div class="col-span-4 text-center text-blue-600 py-10 font-bold">시스템 로딩 중...<br><span class="text-xs font-normal text-gray-500 mt-2 block">화면이 멈춘다면 설정 톱니바퀴를 눌러<br>URL을 저장해주세요.</span></div>';
+        }
+
+        // 2. 완벽한 오류 감지기 (오류 발생 시 화면에 빨간색으로 띄워줍니다)
+        window.onerror = function(msg, url, line) {
+            var c = document.getElementById('memberListContainer');
+            if (c) {
+                c.innerHTML = '<div class="col-span-4 bg-red-50 text-red-600 p-4 rounded-xl text-xs font-bold border border-red-200">에러 발생 (' + line + '줄):<br>' + msg + '</div>';
+            }
             return false;
         };
 
+        // 안전한 스토리지 접근 로직 (앱/웹뷰 호환성 완벽 방어)
         var memoryStore = {};
+        var ls = null;
+        try { ls = window.localStorage; } catch(e) {}
+        
         var safeStorage = {
             getItem: function(key) {
-                try { return window.localStorage.getItem(key); } 
-                catch (e) { return memoryStore[key] || null; }
+                try { if(ls) return ls.getItem(key); } catch(e) {}
+                return memoryStore[key] || null;
             },
             setItem: function(key, val) {
-                try { window.localStorage.setItem(key, val); } 
-                catch (e) { memoryStore[key] = String(val); }
+                try { if(ls) ls.setItem(key, val); } catch(e) {}
+                memoryStore[key] = String(val);
             },
             removeItem: function(key) {
-                try { window.localStorage.removeItem(key); } 
-                catch (e) { delete memoryStore[key]; }
+                try { if(ls) ls.removeItem(key); } catch(e) {}
+                delete memoryStore[key];
             }
         };
 
@@ -144,7 +157,9 @@
             var savedCats = safeStorage.getItem('PATHFINDER_CATS');
             if (savedCats) {
                 var parsed = JSON.parse(savedCats);
-                if (Array.isArray(parsed) && parsed.length > 0) categories = parsed;
+                if (parsed && typeof parsed === 'object' && parsed.length > 0) {
+                    categories = parsed;
+                }
             }
         } catch (e) {}
         var currentCategory = categories[0];
@@ -244,9 +259,7 @@
             var navIds = ['navAttendance', 'navActivity', 'navRanking', 'navSettings'];
             for (var i = 0; i < navIds.length; i++) {
                 var el = document.getElementById(navIds[i]);
-                if (el) {
-                    el.className = el.className.replace('nav-active', 'nav-inactive');
-                }
+                if (el) el.className = el.className.replace('nav-active', 'nav-inactive');
             }
 
             var activeEl = null;
@@ -411,72 +424,3 @@
             var container = document.getElementById('categoryButtons');
             if (!container) return;
             container.innerHTML = '';
-            for (var i = 0; i < categories.length; i++) {
-                (function(cat) {
-                    var btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.innerText = cat;
-                    if (cat === currentCategory) {
-                        btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white shadow-sm';
-                    } else {
-                        btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-600 hover:bg-gray-200';
-                    }
-                    btn.onclick = function() {
-                        currentCategory = cat;
-                        renderCategoryButtons();
-                        filterMembers();
-                    };
-                    container.appendChild(btn);
-                })(categories[i]);
-            }
-            var addBtn = document.createElement('button');
-            addBtn.type = 'button';
-            addBtn.innerText = '+ 추가';
-            addBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100';
-            addBtn.onclick = addNewCategory;
-            container.appendChild(addBtn);
-        }
-
-        function addNewCategory() {
-            var newCat = prompt('추가할 새로운 칭찬 항목 이름을 입력하세요:');
-            if (newCat && newCat.trim() !== '') {
-                var trimmed = newCat.trim();
-                var exists = false;
-                for (var i = 0; i < categories.length; i++) {
-                    if (categories[i] === trimmed) { exists = true; break; }
-                }
-                if (!exists) {
-                    categories.push(trimmed);
-                    safeStorage.setItem('PATHFINDER_CATS', JSON.stringify(categories));
-                    currentCategory = trimmed;
-                    renderCategoryButtons();
-                    filterMembers();
-                } else {
-                    alert('이미 존재하는 항목입니다.');
-                }
-            }
-        }
-
-        // ES6(fetch) 완전히 배제하고 100% 동작하는 구식 통신(XMLHttpRequest) 적용
-        function loadMembers() {
-            var url = safeStorage.getItem('GAS_URL') || DEFAULT_GAS_URL;
-            var container = document.getElementById('memberListContainer');
-
-            if (!url || url.trim() === '') {
-                var panel = document.getElementById('settingsPanel');
-                if (panel && panel.className.indexOf('hidden') !== -1) panel.className = panel.className.replace(' hidden', '');
-                if (container) {
-                    container.innerHTML = '<div class="col-span-4 text-center text-gray-600 py-8 text-sm font-bold bg-amber-50 border border-amber-200 rounded-xl p-4">👆 우측 상단 ⚙️(설정) 아이콘을 누르고 웹 앱 URL을 입력해주세요.</div>';
-                }
-                return;
-            }
-            
-            if (container) {
-                container.innerHTML = '<div class="col-span-4 text-center text-blue-500 py-10 text-sm font-bold animate-pulse">데이터를 서버에서 불러오는 중입니다...</div>';
-            }
-
-            var sep = url.indexOf('?') === -1 ? '?' : '&';
-            var queryUrl = url + sep;
-            
-            if (currentMode === 'ranking') {
-                var sDate = document.getElementById('rankStartDate
