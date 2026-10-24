@@ -38,7 +38,6 @@
 
             <div>
                 <label class="block text-xs font-semibold text-gray-600 mb-1">모드 선택</label>
-                <!-- 4개 탭 버튼으로 개편 -->
                 <div class="grid grid-cols-2 gap-2">
                     <button type="button" id="btnAttendance" onclick="setMode('attendance')" class="py-2.5 rounded-xl font-bold text-sm transition-all bg-blue-600 text-white shadow-sm">출석 체크</button>
                     <button type="button" id="btnActivity" onclick="setMode('activity')" class="py-2.5 rounded-xl font-bold text-sm transition-all bg-gray-100 text-gray-600">칭찬</button>
@@ -47,7 +46,7 @@
                 </div>
             </div>
             
-            <!-- 칭찬 항목 선택 영역 (칭찬 모드일 때만 표시) -->
+            <!-- 칭찬 항목 선택 영역 -->
             <div id="categoryContainer" class="hidden space-y-2 pt-1">
                 <label class="block text-xs font-semibold text-gray-600">칭찬 항목 선택</label>
                 <div id="categoryButtons" class="flex flex-wrap gap-1.5">
@@ -68,7 +67,7 @@
 
     </div>
 
-    <!-- 하단 고정 저장 버튼 (순위 모드에서는 자동 숨김) -->
+    <!-- 하단 고정 저장 버튼 -->
     <div id="footerBar" class="fixed bottom-0 left-0 right-0 bg-white border-t p-3 max-w-md mx-auto shadow-lg">
         <button onclick="submitData()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-center">전송 및 저장하기</button>
     </div>
@@ -79,6 +78,28 @@
         
         let categories = JSON.parse(localStorage.getItem('PATHFINDER_CATS')) || ['찬양', '태도'];
         let currentCategory = categories[0];
+
+        // 카테고리별 고유 색상 팔레트 정의
+        const categoryColorMap = {
+            '찬양': { text: 'text-rose-500', badgeBg: 'bg-rose-50 text-rose-600 border border-rose-200' },
+            '태도': { text: 'text-amber-500', badgeBg: 'bg-amber-50 text-amber-600 border border-amber-200' }
+        };
+
+        function getCategoryStyle(cat) {
+            if (!categoryColorMap[cat]) {
+                const palette = [
+                    { text: 'text-blue-500', badgeBg: 'bg-blue-50 text-blue-600 border border-blue-200' },
+                    { text: 'text-emerald-500', badgeBg: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
+                    { text: 'text-purple-500', badgeBg: 'bg-purple-50 text-purple-600 border border-purple-200' },
+                    { text: 'text-teal-500', badgeBg: 'bg-teal-50 text-teal-600 border border-teal-200' },
+                    { text: 'text-indigo-500', badgeBg: 'bg-indigo-50 text-indigo-600 border border-indigo-200' }
+                ];
+                let hash = 0;
+                for (let i = 0; i < cat.length; i++) hash += cat.charCodeAt(i);
+                categoryColorMap[cat] = palette[hash % palette.length];
+            }
+            return categoryColorMap[cat];
+        }
 
         window.onload = function() {
             const today = new Date().toISOString().split('T')[0];
@@ -120,12 +141,10 @@
             const catContainer = document.getElementById('categoryContainer');
             const footerBar = document.getElementById('footerBar');
 
-            // 버튼 색상 초기화
             [btnAtt, btnAct, btnDaily, btnOverall].forEach(btn => {
                 btn.className = "py-2.5 rounded-xl font-bold text-sm transition-all bg-gray-100 text-gray-600";
             });
 
-            // 순위 모드일 때는 하단 저장 버튼 숨김, 입력 모드일 때는 표시
             if (mode === 'attendance') {
                 btnAtt.className = "py-2.5 rounded-xl font-bold text-sm transition-all bg-blue-600 text-white shadow-sm";
                 catContainer.classList.add('hidden');
@@ -138,11 +157,11 @@
             } else if (mode === 'daily-rank') {
                 btnDaily.className = "py-2.5 rounded-xl font-bold text-sm transition-all bg-blue-600 text-white shadow-sm";
                 catContainer.classList.add('hidden');
-                footerBar.classList.add('hidden'); // 순위 화면은 저장 버튼 필요 없음
+                footerBar.classList.add('hidden');
             } else if (mode === 'overall-rank') {
                 btnOverall.className = "py-2.5 rounded-xl font-bold text-sm transition-all bg-blue-600 text-white shadow-sm";
                 catContainer.classList.add('hidden');
-                footerBar.classList.add('hidden'); // 순위 화면은 저장 버튼 필요 없음
+                footerBar.classList.add('hidden');
             }
 
             if (members.length > 0) {
@@ -237,9 +256,7 @@
                 return;
             }
 
-            // 정렬 및 순위 산정 로직
             if (currentMode === 'daily-rank') {
-                // 일일 순위: 출석 여부 우선, 당일 칭찬 스티커 갯수 기준 내림차순 정렬
                 list.sort((a, b) => {
                     const aAtt = a.attendanceStatus === '출석' ? 1 : 0;
                     const bAtt = b.attendanceStatus === '출석' ? 1 : 0;
@@ -247,7 +264,6 @@
                     return (b.dailyScore || 0) - (a.dailyScore || 0);
                 });
             } else if (currentMode === 'overall-rank') {
-                // 전체 순위: 출석률(%) 우선, 전체 적립된 칭찬 스티커 갯수 기준 내림차순 정렬
                 list.sort((a, b) => {
                     if ((b.attendanceRate || 0) !== (a.attendanceRate || 0)) {
                         return (b.attendanceRate || 0) - (a.attendanceRate || 0);
@@ -262,7 +278,7 @@
                 card.className = 'bg-white p-4 rounded-xl shadow-sm flex items-center justify-between';
 
                 let controlHtml = '';
-                let infoHtml = '';
+                let middleHtml = ''; // 이름과 조절 버튼 사이의 공간 (하트 스티커 혹은 순위 정보)
 
                 if (currentMode === 'attendance') {
                     const isAlreadyChecked = m.attendanceStatus === '출석';
@@ -279,25 +295,46 @@
                         </label>
                     `;
                 } else if (currentMode === 'activity') {
-                    if (m.activityCounts) {
-                        for (let [cat, cnt] of Object.entries(m.activityCounts)) {
-                            if (cnt > 0) {
-                                infoHtml += `<span class="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold">${cat}:${cnt}회</span>`;
+                    // 칭찬 모드: 이름과 - + 버튼 사이에 하트 스티커 누적 표현
+                    let heartsContainer = '<div class="flex flex-col gap-1 px-2 flex-grow overflow-x-auto">';
+                    let allCats = new Set([...Object.keys(m.activityCounts || {}), ...Object.keys(m.tempActivityCounts || {})]);
+                    
+                    if (allCats.size === 0) {
+                        heartsContainer += '<span class="text-xs text-gray-300">칭찬 내역 없음</span>';
+                    } else {
+                        allCats.forEach(cat => {
+                            let saved = (m.activityCounts && m.activityCounts[cat]) || 0;
+                            let temp = (m.tempActivityCounts && m.tempActivityCounts[cat]) || 0;
+                            let total = saved + temp;
+                            if (total > 0) {
+                                let style = getCategoryStyle(cat);
+                                let hearts = '';
+                                for (let h = 0; h < total; h++) {
+                                    hearts += `<svg class="w-3.5 h-3.5 ${style.text} inline-block mr-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
+                                }
+                                heartsContainer += `
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="text-[10px] px-1.5 py-0.5 rounded font-bold ${style.badgeBg}">${cat}</span>
+                                        <div class="flex items-center flex-wrap">${hearts}</div>
+                                    </div>
+                                `;
                             }
-                        }
+                        });
                     }
+                    heartsContainer += '</div>';
+                    middleHtml = heartsContainer;
+
                     if (!m.tempActivityCounts) m.tempActivityCounts = {};
                     const currentCount = m.tempActivityCounts[currentCategory] || 0;
 
                     controlHtml = `
-                        <div class="flex items-center space-x-2">
+                        <div class="flex items-center space-x-2 flex-shrink-0">
                             <button type="button" onclick="adjustCount(${originalIndex}, -1)" class="w-8 h-8 bg-gray-100 rounded-lg font-bold text-gray-600">-</button>
                             <span id="cnt_${originalIndex}" class="w-8 text-center font-bold">${currentCount}</span>
                             <button type="button" onclick="adjustCount(${originalIndex}, 1)" class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg font-bold">+</button>
                         </div>
                     `;
                 } else if (currentMode === 'daily-rank') {
-                    // 일일 순위 뷰
                     const rankBadge = `<span class="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full font-bold mr-2">${index + 1}위</span>`;
                     const attBadge = m.attendanceStatus === '출석' ? '<span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">출석완료</span>' : '<span class="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">미출석</span>';
                     const scoreBadge = `<span class="text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full font-bold">당일 칭찬: ${m.dailyScore || 0}개</span>`;
@@ -308,9 +345,8 @@
                             ${scoreBadge}
                         </div>
                     `;
-                    infoHtml = rankBadge;
+                    middleHtml = `<div class="flex items-center">${rankBadge}</div>`;
                 } else if (currentMode === 'overall-rank') {
-                    // 전체 순위 뷰
                     const rankBadge = `<span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded-full font-bold mr-2">${index + 1}위</span>`;
                     const rateBadge = `<span class="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-bold">출석률: ${m.attendanceRate || 0}%</span>`;
                     const totalScoreBadge = `<span class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold">전체 칭찬: ${m.overallScore || 0}개</span>`;
@@ -321,22 +357,19 @@
                             ${totalScoreBadge}
                         </div>
                     `;
-                    infoHtml = rankBadge;
+                    middleHtml = `<div class="flex items-center">${rankBadge}</div>`;
                 }
 
                 card.innerHTML = `
-                    <div class="flex items-center">
+                    <div class="flex items-center flex-shrink-0">
                         <div>
-                            <div class="font-bold text-gray-800 flex items-center">
-                                ${infoHtml}
+                            <div class="font-bold text-gray-800">
                                 <span>${m.이름 || '이름 없음'}</span>
-                            </div>
-                            <div class="flex flex-wrap gap-1 mt-1">
-                                ${currentMode === 'activity' ? infoHtml : ''}
                             </div>
                             <div class="text-xs text-gray-400 mt-0.5">${m.회원ID || ''}</div>
                         </div>
                     </div>
+                    ${currentMode === 'activity' || currentMode === 'daily-rank' || currentMode === 'overall-rank' ? middleHtml : ''}
                     ${controlHtml}
                 `;
                 container.appendChild(card);
