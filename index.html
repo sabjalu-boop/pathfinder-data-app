@@ -103,7 +103,9 @@
         window.onload = function() {
             const today = new Date().toISOString().split('T')[0];
             const dateInput = document.getElementById('recordDate');
-            if (dateInput) dateInput.value = today;
+            if (dateInput && !dateInput.value) {
+                dateInput.value = today;
+            }
 
             const savedUrl = localStorage.getItem('GAS_URL');
             if (savedUrl) {
@@ -218,7 +220,15 @@
         async function loadMembers() {
             const url = localStorage.getItem('GAS_URL');
             if (!url) return;
-            const recordDate = document.getElementById('recordDate').value;
+            
+            let recordDateInput = document.getElementById('recordDate');
+            let recordDate = recordDateInput ? recordDateInput.value : '';
+            
+            // 날짜가 비어있으면 오늘 날짜로 자동 세팅
+            if (!recordDate) {
+                recordDate = new Date().toISOString().split('T')[0];
+                if (recordDateInput) recordDateInput.value = recordDate;
+            }
 
             const container = document.getElementById('memberListContainer');
             container.innerHTML = '<div class="text-center text-gray-400 py-10 text-sm">회원 명부를 불러오는 중...</div>';
@@ -233,7 +243,6 @@
                     return;
                 }
 
-                // 각 회원 데이터에 고유한 절대 인덱스(_uniqueIndex) 부여 (중복 ID 충돌 원천 방지)
                 members.forEach((m, idx) => {
                     m._uniqueIndex = idx;
                     m.attendanceChecked = (m.attendanceStatus === '출석');
@@ -252,7 +261,6 @@
             renderMembers(filtered);
         }
 
-        // 고유 인덱스를 직접 사용하여 정확한 회원을 토글
         function toggleAttendanceCard(originalIndex) {
             if (members[originalIndex].attendanceStatus === '출석') return; 
             members[originalIndex].attendanceChecked = !members[originalIndex].attendanceChecked;
@@ -288,7 +296,7 @@
             }
 
             list.forEach((m) => {
-                const originalIndex = m._uniqueIndex; // 중복 ID 충돌을 해결하는 핵심 고유 인덱스
+                const originalIndex = m._uniqueIndex;
                 const card = document.createElement('div');
 
                 let controlHtml = '';
@@ -365,74 +373,4 @@
                                 ${scoreBadge}
                             </div>
                         `;
-                        middleHtml = `<div class="flex items-center">${rankBadge}</div>`;
-                    } else if (currentMode === 'overall-rank') {
-                        const rankIndex = list.indexOf(m) + 1;
-                        const rankBadge = `<span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded-full font-bold mr-2">${rankIndex}위</span>`;
-                        const rateBadge = `<span class="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-bold">출석률: ${m.attendanceRate || 0}%</span>`;
-                        const totalScoreBadge = `<span class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold">전체 칭찬: ${m.overallScore || 0}개</span>`;
-
-                        controlHtml = `
-                            <div class="flex items-center space-x-1.5">
-                                ${rateBadge}
-                                ${totalScoreBadge}
-                            </div>
-                        `;
-                        middleHtml = `<div class="flex items-center">${rankBadge}</div>`;
-                    }
-                }
-
-                card.innerHTML = `
-                    <div class="flex items-center flex-shrink-0">
-                        <div>
-                            <div class="font-bold text-gray-800">
-                                <span>${m.이름 || '이름 없음'}</span>
-                            </div>
-                            <div class="text-xs text-gray-400 mt-0.5">${m.회원ID || ''}</div>
-                        </div>
-                    </div>
-                    ${currentMode === 'activity' || currentMode === 'daily-rank' || currentMode === 'overall-rank' ? middleHtml : ''}
-                    ${controlHtml}
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        function adjustCount(originalIndex, delta) {
-            if (!members[originalIndex].tempActivityCounts) members[originalIndex].tempActivityCounts = {};
-            if (!members[originalIndex].tempActivityCounts[currentCategory]) members[originalIndex].tempActivityCounts[currentCategory] = 0;
-            
-            members[originalIndex].tempActivityCounts[currentCategory] += delta;
-            if (members[originalIndex].tempActivityCounts[currentCategory] < 0) {
-                members[originalIndex].tempActivityCounts[currentCategory] = 0;
-            }
-            
-            const count = members[originalIndex].tempActivityCounts[currentCategory];
-            const cntSpan = document.getElementById(`cnt_${originalIndex}`);
-            if (cntSpan) cntSpan.innerText = count;
-        }
-
-        async function submitData() {
-            const url = localStorage.getItem('GAS_URL');
-            const customDate = document.getElementById('recordDate').value;
-
-            if (!customDate) {
-                alert('체크할 날짜를 선택해주세요.');
-                return;
-            }
-
-            let queryUrl = `${url}?date=${customDate}`;
-
-            if (currentMode === 'attendance') {
-                let records = [];
-                members.forEach((m) => {
-                    if (m.attendanceStatus === '출석') return; 
-
-                    if (m.attendanceChecked) {
-                        records.push({
-                            memberId: m.회원ID,
-                            name: m.이름,
-                            status: '출석'
-                        });
-                    }
-                });
+                        middle
