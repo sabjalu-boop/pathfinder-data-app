@@ -55,9 +55,17 @@
             </div>
         </div>
 
-        <!-- 회원 검색창 -->
-        <div id="searchContainer" class="mb-4">
+        <!-- 회원 검색창 및 정렬 기능 영역 -->
+        <div class="mb-4 space-y-2">
             <input type="text" id="searchInput" oninput="filterMembers()" placeholder="🔍 회원 이름 검색..." class="w-full border p-3 rounded-xl text-sm bg-white shadow-sm">
+            
+            <!-- 정렬 버튼 그룹 -->
+            <div class="grid grid-cols-4 gap-1.5">
+                <button type="button" id="sortNameAsc" onclick="setSort('name_asc')" class="py-1.5 text-[11px] font-bold rounded-lg bg-blue-600 text-white shadow-sm">이름순 (ㄱㄴㄷ)</button>
+                <button type="button" id="sortNameDesc" onclick="setSort('name_desc')" class="py-1.5 text-[11px] font-bold rounded-lg bg-gray-100 text-gray-600">이름역순</button>
+                <button type="button" id="sortIdAsc" onclick="setSort('id_asc')" class="py-1.5 text-[11px] font-bold rounded-lg bg-gray-100 text-gray-600">ID순 (오름차)</button>
+                <button type="button" id="sortIdDesc" onclick="setSort('id_desc')" class="py-1.5 text-[11px] font-bold rounded-lg bg-gray-100 text-gray-600">ID역순 (내림차)</button>
+            </div>
         </div>
 
         <!-- 4열 그리드 회원 타일 영역 -->
@@ -75,6 +83,7 @@
     <script>
         let members = [];
         let currentMode = 'attendance';
+        let currentSort = 'name_asc'; // 기본 정렬: 이름 오름차순 (ㄱㄴㄷ)
         
         let categories = JSON.parse(localStorage.getItem('PATHFINDER_CATS')) || ['찬양', '태도'];
         let currentCategory = categories[0];
@@ -92,7 +101,6 @@
             return `${year}-${month}-${day}`;
         }
 
-        // 즉시 오늘 날짜 세팅 안전장치
         (function() {
             const dateInput = document.getElementById('recordDate');
             if (dateInput) {
@@ -180,11 +188,22 @@
                 footerBar.classList.add('hidden');
             }
 
-            if (members.length > 0) {
-                const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
-                const filtered = keyword ? members.filter(m => m.이름.toLowerCase().includes(keyword)) : members;
-                renderMembers(filtered);
-            }
+            filterMembers();
+        }
+
+        function setSort(sortType) {
+            currentSort = sortType;
+            ['sortNameAsc', 'sortNameDesc', 'sortIdAsc', 'sortIdDesc'].forEach(id => {
+                const btn = document.getElementById(id);
+                btn.className = "py-1.5 text-[11px] font-bold rounded-lg bg-gray-100 text-gray-600";
+            });
+
+            if (sortType === 'name_asc') document.getElementById('sortNameAsc').className = "py-1.5 text-[11px] font-bold rounded-lg bg-blue-600 text-white shadow-sm";
+            if (sortType === 'name_desc') document.getElementById('sortNameDesc').className = "py-1.5 text-[11px] font-bold rounded-lg bg-blue-600 text-white shadow-sm";
+            if (sortType === 'id_asc') document.getElementById('sortIdAsc').className = "py-1.5 text-[11px] font-bold rounded-lg bg-blue-600 text-white shadow-sm";
+            if (sortType === 'id_desc') document.getElementById('sortIdDesc').className = "py-1.5 text-[11px] font-bold rounded-lg bg-blue-600 text-white shadow-sm";
+
+            filterMembers();
         }
 
         function renderCategoryButtons() {
@@ -203,7 +222,7 @@
                 btn.onclick = () => {
                     currentCategory = cat;
                     renderCategoryButtons();
-                    renderMembers(members);
+                    filterMembers();
                 };
                 container.appendChild(btn);
             });
@@ -225,7 +244,7 @@
                     localStorage.setItem('PATHFINDER_CATS', JSON.stringify(categories));
                     currentCategory = trimmed;
                     renderCategoryButtons();
-                    renderMembers(members);
+                    filterMembers();
                 } else {
                     alert('이미 존재하는 항목입니다.');
                 }
@@ -268,7 +287,7 @@
                     if (!m.tempActivityCounts) m.tempActivityCounts = {};
                 });
 
-                renderMembers(members);
+                filterMembers();
             } catch (error) {
                 clearTimeout(timeoutId);
                 console.error(error);
@@ -282,17 +301,31 @@
 
         function filterMembers() {
             const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
-            const filtered = members.filter(m => m.이름 && m.이름.toLowerCase().includes(keyword));
-            renderMembers(filtered);
+            let list = members.filter(m => m.이름 && m.이름.toLowerCase().includes(keyword));
+
+            // 순위 모드가 아닐 때 사용자 선택 정렬 적용
+            if (currentMode !== 'daily-rank' && currentMode !== 'overall-rank') {
+                list.sort((a, b) => {
+                    if (currentSort === 'name_asc') {
+                        return (a.이름 || '').localeCompare(b.이름 || '');
+                    } else if (currentSort === 'name_desc') {
+                        return (b.이름 || '').localeCompare(a.이름 || '');
+                    } else if (currentSort === 'id_asc') {
+                        return String(a.회원ID || '').localeCompare(String(b.회원ID || ''), undefined, {numeric: true});
+                    } else if (currentSort === 'id_desc') {
+                        return String(b.회원ID || '').localeCompare(String(a.회원ID || ''), undefined, {numeric: true});
+                    }
+                    return 0;
+                });
+            }
+
+            renderMembers(list);
         }
 
         function toggleAttendanceCard(originalIndex) {
             if (members[originalIndex].attendanceStatus === '출석') return; 
             members[originalIndex].attendanceChecked = !members[originalIndex].attendanceChecked;
-            
-            const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
-            const filtered = keyword ? members.filter(m => m.이름.toLowerCase().includes(keyword)) : members;
-            renderMembers(filtered);
+            filterMembers();
         }
 
         function toggleActivityCard(originalIndex) {
@@ -301,10 +334,7 @@
             }
             let currentVal = members[originalIndex].tempActivityCounts[currentCategory] || 0;
             members[originalIndex].tempActivityCounts[currentCategory] = currentVal + 1;
-            
-            const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
-            const filtered = keyword ? members.filter(m => m.이름.toLowerCase().includes(keyword)) : members;
-            renderMembers(filtered);
+            filterMembers();
         }
 
         function renderMembers(list) {
@@ -368,7 +398,6 @@
                     }
                     tile.onclick = () => toggleActivityCard(originalIndex);
 
-                    // 누적 칭찬(하트/숫자) 표시 요약
                     let saved = (m.activityCounts && m.activityCounts[currentCategory]) || 0;
                     let total = saved + tempCount;
                     if (total > 0) {
@@ -477,22 +506,4 @@
                         if (currentMode === 'activity' && m.tempActivityCounts) {
                             if (!m.activityCounts) m.activityCounts = {};
                             if (m.tempActivityCounts[currentCategory]) {
-                                m.activityCounts[currentCategory] = (m.activityCounts[currentCategory] || 0) + m.tempActivityCounts[currentCategory];
-                                m.tempActivityCounts[currentCategory] = 0;
-                            }
-                        }
-                    });
-                    
-                    const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
-                    const filtered = keyword ? members.filter(m => m.이름.toLowerCase().includes(keyword)) : members;
-                    renderMembers(filtered);
-                } else {
-                    alert('저장 실패: ' + (result.message || '알 수 없는 오류'));
-                }
-            } catch (error) {
-                alert('통신 중 오류가 발생했습니다: ' + error);
-            }
-        }
-    </script>
-</body>
-</html>
+                                m.activityCounts[currentCategory] = (m.activity
