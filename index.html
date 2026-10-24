@@ -101,21 +101,24 @@
         }
 
         window.onload = function() {
-            const today = new Date().toISOString().split('T')[0];
-            const dateInput = document.getElementById('recordDate');
-            if (dateInput) {
-                dateInput.value = today;
-            }
-
+            setTodayDate();
             const savedUrl = localStorage.getItem('GAS_URL');
             if (savedUrl) {
                 document.getElementById('scriptUrl').value = savedUrl;
-                setTimeout(loadMembers, 100);
+                setTimeout(loadMembers, 200);
             } else {
                 document.getElementById('settingsPanel').classList.remove('hidden');
                 document.getElementById('memberListContainer').innerHTML = '<div class="text-center text-gray-400 py-10 text-sm">우측 상단 [설정]에서 구글 스크립트 URL을 입력해주세요.</div>';
             }
         };
+
+        function setTodayDate() {
+            const today = new Date().toISOString().split('T')[0];
+            const dateInput = document.getElementById('recordDate');
+            if (dateInput && !dateInput.value) {
+                dateInput.value = today;
+            }
+        }
 
         function toggleSettings() {
             const panel = document.getElementById('settingsPanel');
@@ -221,12 +224,16 @@
             const url = localStorage.getItem('GAS_URL');
             if (!url) return;
             
+            // 날짜가 비어있으면 무조건 오늘 날짜 강제 세팅
             let recordDateInput = document.getElementById('recordDate');
             let recordDate = recordDateInput ? recordDateInput.value : '';
             
             if (!recordDate) {
-                recordDate = new Date().toISOString().split('T')[0];
-                if (recordDateInput) recordDateInput.value = recordDate;
+                const today = new Date().toISOString().split('T')[0];
+                recordDate = today;
+                if (recordDateInput) {
+                    recordDateInput.value = today;
+                }
             }
 
             const container = document.getElementById('memberListContainer');
@@ -247,7 +254,6 @@
                     return;
                 }
 
-                // 각 회원에게 고유 절대 인덱스 부여 및 임시 칭찬 카운트 초기화
                 members.forEach((m, idx) => {
                     m._uniqueIndex = idx;
                     m.attendanceChecked = (m.attendanceStatus === '출석');
@@ -294,7 +300,6 @@
                 members[originalIndex].tempActivityCounts[currentCategory] = 0;
             }
             
-            // 화면 재렌더링하여 칭찬 하트와 숫자 즉시 반영
             const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
             const filtered = keyword ? members.filter(m => m.이름.toLowerCase().includes(keyword)) : members;
             renderMembers(filtered);
@@ -326,7 +331,7 @@
             }
 
             list.forEach((m) => {
-                const originalIndex = m._uniqueIndex; // 절대 인덱스로 고유 식별
+                const originalIndex = m._uniqueIndex;
                 const card = document.createElement('div');
 
                 let controlHtml = '';
@@ -400,7 +405,8 @@
 
                         controlHtml = `
                             <div class="flex items-center space-x-1.5">
-                                ${attBadge}${scoreBadge}
+                                ${attBadge}
+                                ${scoreBadge}
                             </div>
                         `;
                         middleHtml = `<div class="flex items-center">${rankBadge}</div>`;
@@ -412,7 +418,8 @@
 
                         controlHtml = `
                             <div class="flex items-center space-x-1.5">
-                                ${rateBadge}${totalScoreBadge}
+                                ${rateBadge}
+                                ${totalScoreBadge}
                             </div>
                         `;
                         middleHtml = `<div class="flex items-center">${rankBadge}</div>`;
@@ -426,3 +433,96 @@
                                 <span>${m.이름 || '이름 없음'}</span>
                             </div>
                             <div class="text-xs text-gray-400 mt-0.5">${m.회원ID || ''}</div>
+                        </div>
+                    </div>
+                    ${middleHtml}
+                    ${controlHtml}
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function submitData() {
+            const url = localStorage.getItem('GAS_URL');
+            const customDate = document.getElementById('recordDate').value;
+
+            if (!customDate) {
+                alert('체크할 날짜를 선택해주세요.');
+                return;
+            }
+
+            let queryUrl = `${url}?date=${customDate}`;
+
+            if (currentMode === 'attendance') {
+                let records = [];
+                members.forEach((m) => {
+                    if (m.attendanceStatus === '출석') return; 
+
+                    if (m.attendanceChecked) {
+                        records.push({
+                            memberId: m.회원ID,
+                            name: m.이름,
+                            status: '출석'
+                        });
+                    }
+                });
+
+                if (records.length === 0) {
+                    alert('새로 체크된 출석 인원이 없습니다.');
+                    return;
+                }
+
+                queryUrl += `&action=attendance&records=${encodeURIComponent(JSON.stringify(records))}`;
+            } else if (currentMode === 'activity') {
+                let records = [];
+                members.forEach((m) => {
+                    const count = (m.tempActivityCounts && m.tempActivityCounts[currentCategory]) ? m.tempActivityCounts[currentCategory] : 0;
+                    if (count > 0) {
+                        records.push({
+                            memberId: m.회원ID,
+                            name: m.이름,
+                            count: count
+                        });
+                    }
+                });
+
+                if (records.length === 0) {
+                    alert(`[${currentCategory}] 항목에서 횟수가 0보다 큰 회원이 없습니다.`);
+                    return;
+                }
+
+                queryUrl += `&action=activity&activityName=${encodeURIComponent(currentCategory)}&records=${encodeURIComponent(JSON.stringify(records))}`;
+            }
+
+            try {
+                const response = await fetch(queryUrl);
+                const result = await response.json();
+                if (result.status === 'success') {
+                    alert('성공적으로 저장되었습니다!');
+                    
+                    members.forEach(m => { 
+                        if (currentMode === 'attendance' && m.attendanceChecked) {
+                            m.attendanceStatus = '출석';
+                        }
+                        if (currentMode === 'activity' && m.tempActivityCounts) {
+                            if (!m.activityCounts) m.activityCounts = {};
+                            if (m.tempActivityCounts[currentCategory]) {
+                                m.activityCounts[currentCategory] = (m.activityCounts[currentCategory] || 0) + m.tempActivityCounts[currentCategory];
+                                m.tempActivityCounts[currentCategory] = 0;
+                            }
+                        }
+                    });
+                    
+                    const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+                    const filtered = keyword ? members.filter(m => m.이름.toLowerCase().includes(keyword)) : members;
+                    renderMembers(filtered);
+                } else {
+                    alert('저장 실패: ' + (result.message || '알 수 없는 오류'));
+                }
+            } catch (error) {
+                alert('통신 중 오류가 발생했습니다: ' + error);
+            }
+        }
+    </script>
+</body>
+</html>
