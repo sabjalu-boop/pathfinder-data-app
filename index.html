@@ -33,6 +33,7 @@
         <div class="bg-white p-4 rounded-xl shadow-sm mb-4 space-y-3">
             <div>
                 <label class="block text-xs font-semibold text-gray-600 mb-1">체크 날짜 선택</label>
+                <!-- 고정값 대신 빈 상태로 두되, 스크립트가 즉시 오늘 날짜를 채워 넣습니다 -->
                 <input type="date" id="recordDate" onchange="loadMembers()" class="w-full border p-2 rounded-lg text-sm bg-white">
             </div>
 
@@ -84,6 +85,15 @@
             '태도': { text: 'text-amber-500', badgeBg: 'bg-amber-50 text-amber-600 border border-amber-200' }
         };
 
+        // 동적으로 오늘 날짜 문자열(YYYY-MM-DD)을 생성하는 함수
+        function getTodayString() {
+            const d = new Date();
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
         function getCategoryStyle(cat) {
             if (!categoryColorMap[cat]) {
                 const palette = [
@@ -101,7 +111,12 @@
         }
 
         window.onload = function() {
-            setTodayDate();
+            // 페이지 로드 즉시 오늘 날짜를 동적으로 입력
+            const dateInput = document.getElementById('recordDate');
+            if (dateInput) {
+                dateInput.value = getTodayString();
+            }
+
             const savedUrl = localStorage.getItem('GAS_URL');
             if (savedUrl) {
                 document.getElementById('scriptUrl').value = savedUrl;
@@ -111,14 +126,6 @@
                 document.getElementById('memberListContainer').innerHTML = '<div class="text-center text-gray-400 py-10 text-sm">우측 상단 [설정]에서 구글 스크립트 URL을 입력해주세요.</div>';
             }
         };
-
-        function setTodayDate() {
-            const today = new Date().toISOString().split('T')[0];
-            const dateInput = document.getElementById('recordDate');
-            if (dateInput && !dateInput.value) {
-                dateInput.value = today;
-            }
-        }
 
         function toggleSettings() {
             const panel = document.getElementById('settingsPanel');
@@ -224,8 +231,14 @@
             const url = localStorage.getItem('GAS_URL');
             if (!url) return;
             
-            setTodayDate();
-            let recordDate = document.getElementById('recordDate').value;
+            let recordDateInput = document.getElementById('recordDate');
+            let recordDate = recordDateInput ? recordDateInput.value : '';
+            
+            // 혹시라도 날짜가 비어있다면 동적으로 오늘 날짜 채우기
+            if (!recordDate) {
+                recordDate = getTodayString();
+                if (recordDateInput) recordDateInput.value = recordDate;
+            }
 
             const container = document.getElementById('memberListContainer');
             container.innerHTML = '<div class="text-center text-gray-400 py-10 text-sm">회원 명부를 불러오는 중...</div>';
@@ -269,7 +282,6 @@
             renderMembers(filtered);
         }
 
-        // 출석 카드 터치 토글
         function toggleAttendanceCard(originalIndex) {
             if (members[originalIndex].attendanceStatus === '출석') return; 
             members[originalIndex].attendanceChecked = !members[originalIndex].attendanceChecked;
@@ -279,7 +291,6 @@
             renderMembers(filtered);
         }
 
-        // 칭찬 카드 터치 시 순환 없이 계속 1개씩 증가
         function toggleActivityCard(originalIndex) {
             if (!members[originalIndex].tempActivityCounts) {
                 members[originalIndex].tempActivityCounts = {};
@@ -353,7 +364,6 @@
                     }
                     card.onclick = () => toggleActivityCard(originalIndex);
 
-                    // 칭찬 스티커 표시 로직 (1~4개: 개별 하트 / 5개 이상: 하트 + 숫자)
                     let heartsContainer = '<div class="flex flex-col gap-1 px-2 flex-grow overflow-x-auto">';
                     let allCats = new Set([...Object.keys(m.activityCounts || {}), ...Object.keys(m.tempActivityCounts || {})]);
                     
@@ -372,7 +382,6 @@
                                         hearts += `<svg class="w-3.5 h-3.5 ${style.text} inline-block mr-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
                                     }
                                 } else {
-                                    // 5개 이상부터는 하트 아이콘 뒤에 숫자로 표시
                                     hearts += `<svg class="w-3.5 h-3.5 ${style.text} inline-block mr-1 align-middle" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg><span class="text-xs font-bold ${style.text} align-middle">${total}</span>`;
                                 }
                                 heartsContainer += `
@@ -393,4 +402,74 @@
                     if (currentMode === 'daily-rank') {
                         const rankIndex = list.indexOf(m) + 1;
                         const rankBadge = `<span class="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full font-bold mr-2">${rankIndex}위</span>`;
-                        const attBadge = m.attendanceStatus === '출석' ? '<span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold
+                        const attBadge = m.attendanceStatus === '출석' ? '<span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">출석완료</span>' : '<span class="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">미출석</span>';
+                        const scoreBadge = `<span class="text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full font-bold">당일 칭찬: ${m.dailyScore || 0}개</span>`;
+
+                        controlHtml = `
+                            <div class="flex items-center space-x-1.5">
+                                ${attBadge}
+                                ${scoreBadge}
+                            </div>
+                        `;
+                        middleHtml = `<div class="flex items-center">${rankBadge}</div>`;
+                    } else if (currentMode === 'overall-rank') {
+                        const rankIndex = list.indexOf(m) + 1;
+                        const rankBadge = `<span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded-full font-bold mr-2">${rankIndex}위</span>`;
+                        const rateBadge = `<span class="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-bold">출석률: ${m.attendanceRate || 0}%</span>`;
+                        const totalScoreBadge = `<span class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold">전체 칭찬: ${m.overallScore || 0}개</span>`;
+
+                        controlHtml = `
+                            <div class="flex items-center space-x-1.5">
+                                ${rateBadge}
+                                ${totalScoreBadge}
+                            </div>
+                        `;
+                        middleHtml = `<div class="flex items-center">${rankBadge}</div>`;
+                    }
+                }
+
+                card.innerHTML = `
+                    <div class="flex items-center flex-shrink-0">
+                        <div>
+                            <div class="font-bold text-gray-800">
+                                <span>${m.이름 || '이름 없음'}</span>
+                            </div>
+                            <div class="text-xs text-gray-400 mt-0.5">${m.회원ID || ''}</div>
+                        </div>
+                    </div>
+                    ${middleHtml}
+                    ${controlHtml}
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function submitData() {
+            const url = localStorage.getItem('GAS_URL');
+            let recordDate = document.getElementById('recordDate').value;
+
+            if (!recordDate) {
+                recordDate = getTodayString();
+                document.getElementById('recordDate').value = recordDate;
+            }
+
+            let queryUrl = `${url}?date=${recordDate}`;
+
+            if (currentMode === 'attendance') {
+                let records = [];
+                members.forEach((m) => {
+                    if (m.attendanceStatus === '출석') return; 
+
+                    if (m.attendanceChecked) {
+                        records.push({
+                            memberId: m.회원ID,
+                            name: m.이름,
+                            status: '출석'
+                        });
+                    }
+                });
+
+                if (records.length === 0) {
+                    alert('새로 체크된 출석 인원이 없습니다.');
+                    return;
+                }
