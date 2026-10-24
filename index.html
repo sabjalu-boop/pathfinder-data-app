@@ -12,7 +12,7 @@
         /* 네비게이션 아이콘 전환 효과용 */
         .nav-icon { transition: all 0.2s ease-in-out; }
         .nav-active { opacity: 1; transform: scale(1.2); filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3)); }
-        .nav-inactive { opacity: 0.5; }
+        .nav-inactive { opacity: 0.5; filter: grayscale(100%); }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 pb-24">
@@ -34,7 +34,7 @@
         <div id="settingsPanel" class="bg-white p-4 rounded-xl shadow-sm mb-4 hidden border-2 border-blue-500">
             <label class="block text-xs font-semibold text-gray-600 mb-1">Google Apps Script 웹 앱 URL</label>
             <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/.../exec" class="w-full border p-2 rounded-lg text-sm mb-2 focus:ring-2 focus:ring-blue-400">
-            <button type="button" id="btnSaveUrl" class="w-full bg-gray-800 text-white py-2 rounded-lg text-sm font-semibold">URL 저장 및 새로고침</button>
+            <button type="button" id="btnSaveUrl" class="w-full bg-gray-800 text-white py-2 rounded-lg text-sm font-semibold">URL 저장 및 불러오기</button>
         </div>
 
         <!-- 공통 컨트롤 패널 -->
@@ -53,7 +53,7 @@
                 <!-- 간편 월 선택 -->
                 <div class="flex items-center space-x-2">
                     <input type="month" id="rankMonth" class="w-2/3 border p-2 rounded-lg text-sm bg-gray-50">
-                    <button type="button" onclick="applyRankMonth()" class="w-1/3 bg-blue-100 text-blue-700 py-2 rounded-lg text-xs font-bold hover:bg-blue-200">월 적용</button>
+                    <button type="button" id="btnApplyMonth" class="w-1/3 bg-blue-100 text-blue-700 py-2 rounded-lg text-xs font-bold hover:bg-blue-200">월 적용</button>
                 </div>
                 
                 <!-- 상세 기간 설정 -->
@@ -62,7 +62,7 @@
                     <span class="text-gray-400 font-bold">~</span>
                     <input type="date" id="rankEndDate" class="w-full border p-2 rounded-lg text-sm bg-gray-50">
                 </div>
-                <button type="button" onclick="loadMembers()" class="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-bold shadow-sm">해당 기간 데이터 조회</button>
+                <button type="button" id="btnLoadRank" class="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-bold shadow-sm">해당 기간 데이터 조회</button>
             </div>
             
             <!-- 칭찬 항목 선택 영역 -->
@@ -99,10 +99,11 @@
     </div>
 
     <script>
+        // 안전한 오류 감지
         window.onerror = function(msg, url, lineNo) {
             var container = document.getElementById('memberListContainer');
             if (container) {
-                container.innerHTML = '<div class="col-span-4 text-center text-red-600 py-6 text-xs font-bold bg-red-50 rounded-xl p-3">오류 발생:<br>' + msg + '</div>';
+                container.innerHTML = '<div class="col-span-4 text-center text-red-600 py-6 text-xs font-bold bg-red-50 rounded-xl p-3">오류 발생 (' + lineNo + '):<br>' + msg + '</div>';
             }
             return false;
         };
@@ -125,7 +126,7 @@
 
         var DEFAULT_GAS_URL = "";
         var members = [];
-        var currentMode = 'attendance'; // 'attendance', 'activity', 'ranking'
+        var currentMode = 'attendance';
         var currentSort = 'name_asc';
         var isCustomSorting = false;
         
@@ -134,4 +135,83 @@
             var savedCats = safeStorage.getItem('PATHFINDER_CATS');
             if (savedCats) {
                 var parsed = JSON.parse(savedCats);
-                if (Array.isArray(parsed) && parsed.length > 0) categories =
+                if (Array.isArray(parsed) && parsed.length > 0) categories = parsed;
+            }
+        } catch (e) {}
+        var currentCategory = categories[0];
+
+        var categoryColorMap = {
+            '찬양': { text: 'text-rose-500', badgeBg: 'bg-rose-50 text-rose-600' },
+            '태도': { text: 'text-amber-500', badgeBg: 'bg-amber-50 text-amber-600' }
+        };
+
+        // 1자릿수 숫자를 2자릿수로 안전하게 맞춰주는 함수 (구형 기기 호환)
+        function pad2(num) {
+            return num < 10 ? '0' + num : String(num);
+        }
+
+        function getTodayString() {
+            var d = new Date();
+            return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+        }
+
+        function initDates() {
+            var elDate = document.getElementById('recordDate');
+            if (elDate && !elDate.value) elDate.value = getTodayString();
+            
+            var d = new Date();
+            var monthStr = d.getFullYear() + '-' + pad2(d.getMonth() + 1);
+            var rankMonthEl = document.getElementById('rankMonth');
+            if (rankMonthEl) rankMonthEl.value = monthStr;
+            
+            applyRankMonth();
+        }
+
+        function applyRankMonth() {
+            var mVal = document.getElementById('rankMonth').value;
+            if (mVal) {
+                var parts = mVal.split('-');
+                var year = parseInt(parts[0], 10);
+                var month = parseInt(parts[1], 10);
+                var lastDay = new Date(year, month, 0); // 그 달의 마지막 날 계산
+
+                document.getElementById('rankStartDate').value = year + '-' + pad2(month) + '-01';
+                document.getElementById('rankEndDate').value = year + '-' + pad2(month) + '-' + pad2(lastDay.getDate());
+            }
+        }
+
+        function getCheckedDate() {
+            var el = document.getElementById('recordDate');
+            if (!el.value) el.value = getTodayString();
+            return el.value;
+        }
+
+        function getMemberUniqueKey(m) {
+            return String(m.회원ID || '') + '__' + String(m.이름 || '');
+        }
+
+        function getCategoryStyle(cat) {
+            if (!categoryColorMap[cat]) {
+                var palette = [
+                    { text: 'text-blue-500', badgeBg: 'bg-blue-50 text-blue-600' },
+                    { text: 'text-emerald-500', badgeBg: 'bg-emerald-50 text-emerald-600' },
+                    { text: 'text-purple-500', badgeBg: 'bg-purple-50 text-purple-700' }
+                ];
+                var hash = 0;
+                for (var i = 0; i < cat.length; i++) hash += cat.charCodeAt(i);
+                categoryColorMap[cat] = palette[hash % palette.length];
+            }
+            return categoryColorMap[cat];
+        }
+
+        function toggleSettings() {
+            var panel = document.getElementById('settingsPanel');
+            if (panel) {
+                if (panel.classList.contains('hidden')) panel.classList.remove('hidden');
+                else panel.classList.add('hidden');
+            }
+        }
+
+        function saveUrl() {
+            var input = document.getElementById('scriptUrl');
+            var url = input ? input
