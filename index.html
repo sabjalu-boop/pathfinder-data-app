@@ -44,7 +44,7 @@
                 </div>
             </div>
             
-            <!-- 칭찬 카테고리 버튼 선택 영역 -->
+            <!-- 칭찬 항목 선택 영역 -->
             <div id="categoryContainer" class="hidden space-y-2 pt-1">
                 <label class="block text-xs font-semibold text-gray-600">칭찬 항목 선택</label>
                 <div id="categoryButtons" class="flex flex-wrap gap-1.5">
@@ -217,6 +217,10 @@
                 return;
             }
 
+            // 순위 계산을 위한 정렬 배열 생성 (점수가 높은 순)
+            const dailySorted = [...members].sort((a, b) => (b.dailyScore || 0) - (a.dailyScore || 0));
+            const overallSorted = [...members].sort((a, b) => (b.overallScore || 0) - (a.overallScore || 0));
+
             list.forEach((m) => {
                 const originalIndex = members.findIndex(item => item.회원ID === m.회원ID);
                 const card = document.createElement('div');
@@ -240,12 +244,23 @@
                         </label>
                     `;
                 } else {
+                    // 1. 카테고리별 누적 뱃지 표시
                     if (m.activityCounts) {
                         for (let [cat, cnt] of Object.entries(m.activityCounts)) {
                             if (cnt > 0) {
-                                badgesHtml += `<span class="ml-1.5 text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold">${cat}:${cnt}회</span>`;
+                                badgesHtml += `<span class="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold">${cat}:${cnt}회</span>`;
                             }
                         }
+                    }
+
+                    // 2. 일일 순위 및 전체 순위 계산
+                    let dailyRank = dailySorted.findIndex(item => item.회원ID === m.회원ID) + 1;
+                    let overallRank = overallSorted.findIndex(item => item.회원ID === m.회원ID) + 1;
+
+                    // 점수가 0보다 클 때만 순위 뱃지 표시하거나 항상 표시
+                    if (m.dailyScore > 0 || m.overallScore > 0) {
+                        badgesHtml += `<span class="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-bold">일일 ${dailyRank}위</span>`;
+                        badgesHtml += `<span class="text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full font-bold">전체 ${overallRank}위</span>`;
                     }
 
                     if (!m.tempActivityCounts) m.tempActivityCounts = {};
@@ -263,11 +278,14 @@
                 card.innerHTML = `
                     <div class="flex items-center">
                         <div>
-                            <div class="font-bold text-gray-800 flex items-center flex-wrap gap-1">
+                            <div class="font-bold text-gray-800 flex items-center">
                                 <span>${m.이름 || '이름 없음'}</span>
+                            </div>
+                            <!-- 칭찬 내역 및 순위 뱃지 영역 -->
+                            <div class="flex flex-wrap gap-1 mt-1">
                                 ${badgesHtml}
                             </div>
-                            <div class="text-xs text-gray-400">${m.회원ID || ''}</div>
+                            <div class="text-xs text-gray-400 mt-0.5">${m.회원ID || ''}</div>
                         </div>
                     </div>
                     ${controlHtml}
