@@ -101,7 +101,6 @@
         }
 
         window.onload = function() {
-            // 오늘 날짜 강제 세팅
             const today = new Date().toISOString().split('T')[0];
             const dateInput = document.getElementById('recordDate');
             if (dateInput) {
@@ -111,8 +110,7 @@
             const savedUrl = localStorage.getItem('GAS_URL');
             if (savedUrl) {
                 document.getElementById('scriptUrl').value = savedUrl;
-                // 0.2초 지연을 주어 날짜 입력이 완전히 완료된 후 로드 실행 (멈춤 방지)
-                setTimeout(loadMembers, 200);
+                setTimeout(loadMembers, 100);
             } else {
                 document.getElementById('settingsPanel').classList.remove('hidden');
                 document.getElementById('memberListContainer').innerHTML = '<div class="text-center text-gray-400 py-10 text-sm">우측 상단 [설정]에서 구글 스크립트 URL을 입력해주세요.</div>';
@@ -234,8 +232,14 @@
             const container = document.getElementById('memberListContainer');
             container.innerHTML = '<div class="text-center text-gray-400 py-10 text-sm">회원 명부를 불러오는 중...</div>';
 
+            // 6초 타임아웃 적용 (무한 멈춤 방지)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 6000);
+
             try {
-                const response = await fetch(`${url}?date=${recordDate}`);
+                const response = await fetch(`${url}?date=${recordDate}`, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
                 if (!response.ok) throw new Error('서버 응답이 올바르지 않습니다.');
                 members = await response.json();
                 
@@ -251,8 +255,13 @@
 
                 renderMembers(members);
             } catch (error) {
+                clearTimeout(timeoutId);
                 console.error(error);
-                container.innerHTML = `<div class="text-center text-red-400 py-10 text-sm">로드 실패: ${error.message}</div>`;
+                if (error.name === 'AbortError') {
+                    container.innerHTML = '<div class="text-center text-red-400 py-10 text-sm">로드 실패: 서버 응답 시간이 초과되었습니다. URL을 확인해주세요.</div>';
+                } else {
+                    container.innerHTML = `<div class="text-center text-red-400 py-10 text-sm">로드 실패: ${error.message}</div>`;
+                }
             }
         }
 
