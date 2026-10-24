@@ -38,13 +38,16 @@
 
             <div>
                 <label class="block text-xs font-semibold text-gray-600 mb-1">모드 선택</label>
+                <!-- 4개 탭 버튼으로 개편 -->
                 <div class="grid grid-cols-2 gap-2">
                     <button type="button" id="btnAttendance" onclick="setMode('attendance')" class="py-2.5 rounded-xl font-bold text-sm transition-all bg-blue-600 text-white shadow-sm">출석 체크</button>
                     <button type="button" id="btnActivity" onclick="setMode('activity')" class="py-2.5 rounded-xl font-bold text-sm transition-all bg-gray-100 text-gray-600">칭찬</button>
+                    <button type="button" id="btnDailyRank" onclick="setMode('daily-rank')" class="py-2.5 rounded-xl font-bold text-sm transition-all bg-gray-100 text-gray-600">일일 순위</button>
+                    <button type="button" id="btnOverallRank" onclick="setMode('overall-rank')" class="py-2.5 rounded-xl font-bold text-sm transition-all bg-gray-100 text-gray-600">전체 순위</button>
                 </div>
             </div>
             
-            <!-- 칭찬 항목 선택 영역 -->
+            <!-- 칭찬 항목 선택 영역 (칭찬 모드일 때만 표시) -->
             <div id="categoryContainer" class="hidden space-y-2 pt-1">
                 <label class="block text-xs font-semibold text-gray-600">칭찬 항목 선택</label>
                 <div id="categoryButtons" class="flex flex-wrap gap-1.5">
@@ -65,7 +68,7 @@
 
     </div>
 
-    <!-- 하단 고정 저장 버튼 -->
+    <!-- 하단 고정 저장 버튼 (순위 모드에서는 자동 숨김) -->
     <div id="footerBar" class="fixed bottom-0 left-0 right-0 bg-white border-t p-3 max-w-md mx-auto shadow-lg">
         <button onclick="submitData()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-center">전송 및 저장하기</button>
     </div>
@@ -112,17 +115,34 @@
             currentMode = mode;
             const btnAtt = document.getElementById('btnAttendance');
             const btnAct = document.getElementById('btnActivity');
+            const btnDaily = document.getElementById('btnDailyRank');
+            const btnOverall = document.getElementById('btnOverallRank');
             const catContainer = document.getElementById('categoryContainer');
+            const footerBar = document.getElementById('footerBar');
 
+            // 버튼 색상 초기화
+            [btnAtt, btnAct, btnDaily, btnOverall].forEach(btn => {
+                btn.className = "py-2.5 rounded-xl font-bold text-sm transition-all bg-gray-100 text-gray-600";
+            });
+
+            // 순위 모드일 때는 하단 저장 버튼 숨김, 입력 모드일 때는 표시
             if (mode === 'attendance') {
                 btnAtt.className = "py-2.5 rounded-xl font-bold text-sm transition-all bg-blue-600 text-white shadow-sm";
-                btnAct.className = "py-2.5 rounded-xl font-bold text-sm transition-all bg-gray-100 text-gray-600";
                 catContainer.classList.add('hidden');
-            } else {
+                footerBar.classList.remove('hidden');
+            } else if (mode === 'activity') {
                 btnAct.className = "py-2.5 rounded-xl font-bold text-sm transition-all bg-blue-600 text-white shadow-sm";
-                btnAtt.className = "py-2.5 rounded-xl font-bold text-sm transition-all bg-gray-100 text-gray-600";
                 catContainer.classList.remove('hidden');
                 renderCategoryButtons();
+                footerBar.classList.remove('hidden');
+            } else if (mode === 'daily-rank') {
+                btnDaily.className = "py-2.5 rounded-xl font-bold text-sm transition-all bg-blue-600 text-white shadow-sm";
+                catContainer.classList.add('hidden');
+                footerBar.classList.add('hidden'); // 순위 화면은 저장 버튼 필요 없음
+            } else if (mode === 'overall-rank') {
+                btnOverall.className = "py-2.5 rounded-xl font-bold text-sm transition-all bg-blue-600 text-white shadow-sm";
+                catContainer.classList.add('hidden');
+                footerBar.classList.add('hidden'); // 순위 화면은 저장 버튼 필요 없음
             }
 
             if (members.length > 0) {
@@ -217,17 +237,32 @@
                 return;
             }
 
-            // 순위 계산을 위한 정렬 배열 생성 (점수가 높은 순)
-            const dailySorted = [...members].sort((a, b) => (b.dailyScore || 0) - (a.dailyScore || 0));
-            const overallSorted = [...members].sort((a, b) => (b.overallScore || 0) - (a.overallScore || 0));
+            // 정렬 및 순위 산정 로직
+            if (currentMode === 'daily-rank') {
+                // 일일 순위: 출석 여부 우선, 당일 칭찬 스티커 갯수 기준 내림차순 정렬
+                list.sort((a, b) => {
+                    const aAtt = a.attendanceStatus === '출석' ? 1 : 0;
+                    const bAtt = b.attendanceStatus === '출석' ? 1 : 0;
+                    if (bAtt !== aAtt) return bAtt - aAtt;
+                    return (b.dailyScore || 0) - (a.dailyScore || 0);
+                });
+            } else if (currentMode === 'overall-rank') {
+                // 전체 순위: 출석률(%) 우선, 전체 적립된 칭찬 스티커 갯수 기준 내림차순 정렬
+                list.sort((a, b) => {
+                    if ((b.attendanceRate || 0) !== (a.attendanceRate || 0)) {
+                        return (b.attendanceRate || 0) - (a.attendanceRate || 0);
+                    }
+                    return (b.overallScore || 0) - (a.overallScore || 0);
+                });
+            }
 
-            list.forEach((m) => {
+            list.forEach((m, index) => {
                 const originalIndex = members.findIndex(item => item.회원ID === m.회원ID);
                 const card = document.createElement('div');
                 card.className = 'bg-white p-4 rounded-xl shadow-sm flex items-center justify-between';
 
                 let controlHtml = '';
-                let badgesHtml = '';
+                let infoHtml = '';
 
                 if (currentMode === 'attendance') {
                     const isAlreadyChecked = m.attendanceStatus === '출석';
@@ -243,26 +278,14 @@
                             <span class="ml-2 text-sm font-medium ${isAlreadyChecked ? 'text-blue-600 font-bold' : 'text-gray-700'}">${badgeText}</span>
                         </label>
                     `;
-                } else {
-                    // 1. 카테고리별 누적 뱃지 표시
+                } else if (currentMode === 'activity') {
                     if (m.activityCounts) {
                         for (let [cat, cnt] of Object.entries(m.activityCounts)) {
                             if (cnt > 0) {
-                                badgesHtml += `<span class="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold">${cat}:${cnt}회</span>`;
+                                infoHtml += `<span class="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold">${cat}:${cnt}회</span>`;
                             }
                         }
                     }
-
-                    // 2. 일일 순위 및 전체 순위 계산
-                    let dailyRank = dailySorted.findIndex(item => item.회원ID === m.회원ID) + 1;
-                    let overallRank = overallSorted.findIndex(item => item.회원ID === m.회원ID) + 1;
-
-                    // 점수가 0보다 클 때만 순위 뱃지 표시하거나 항상 표시
-                    if (m.dailyScore > 0 || m.overallScore > 0) {
-                        badgesHtml += `<span class="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-bold">일일 ${dailyRank}위</span>`;
-                        badgesHtml += `<span class="text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full font-bold">전체 ${overallRank}위</span>`;
-                    }
-
                     if (!m.tempActivityCounts) m.tempActivityCounts = {};
                     const currentCount = m.tempActivityCounts[currentCategory] || 0;
 
@@ -273,17 +296,43 @@
                             <button type="button" onclick="adjustCount(${originalIndex}, 1)" class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg font-bold">+</button>
                         </div>
                     `;
+                } else if (currentMode === 'daily-rank') {
+                    // 일일 순위 뷰
+                    const rankBadge = `<span class="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full font-bold mr-2">${index + 1}위</span>`;
+                    const attBadge = m.attendanceStatus === '출석' ? '<span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">출석완료</span>' : '<span class="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">미출석</span>';
+                    const scoreBadge = `<span class="text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full font-bold">당일 칭찬: ${m.dailyScore || 0}개</span>`;
+
+                    controlHtml = `
+                        <div class="flex items-center space-x-1.5">
+                            ${attBadge}
+                            ${scoreBadge}
+                        </div>
+                    `;
+                    infoHtml = rankBadge;
+                } else if (currentMode === 'overall-rank') {
+                    // 전체 순위 뷰
+                    const rankBadge = `<span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded-full font-bold mr-2">${index + 1}위</span>`;
+                    const rateBadge = `<span class="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-bold">출석률: ${m.attendanceRate || 0}%</span>`;
+                    const totalScoreBadge = `<span class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold">전체 칭찬: ${m.overallScore || 0}개</span>`;
+
+                    controlHtml = `
+                        <div class="flex items-center space-x-1.5">
+                            ${rateBadge}
+                            ${totalScoreBadge}
+                        </div>
+                    `;
+                    infoHtml = rankBadge;
                 }
 
                 card.innerHTML = `
                     <div class="flex items-center">
                         <div>
                             <div class="font-bold text-gray-800 flex items-center">
+                                ${infoHtml}
                                 <span>${m.이름 || '이름 없음'}</span>
                             </div>
-                            <!-- 칭찬 내역 및 순위 뱃지 영역 -->
                             <div class="flex flex-wrap gap-1 mt-1">
-                                ${badgesHtml}
+                                ${currentMode === 'activity' ? infoHtml : ''}
                             </div>
                             <div class="text-xs text-gray-400 mt-0.5">${m.회원ID || ''}</div>
                         </div>
@@ -341,7 +390,7 @@
                 }
 
                 queryUrl += `&action=attendance&records=${encodeURIComponent(JSON.stringify(records))}`;
-            } else {
+            } else if (currentMode === 'activity') {
                 let records = [];
                 members.forEach((m, index) => {
                     const count = (m.tempActivityCounts && m.tempActivityCounts[currentCategory]) ? m.tempActivityCounts[currentCategory] : 0;
