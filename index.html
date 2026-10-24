@@ -250,16 +250,16 @@
             renderMembers(filtered);
         }
 
-        // 전체 리렌더링 없이 해당 버튼만 직접 스타일 업데이트 (터치 밀림 방지)
+        // 출석 버튼 터치 영역 및 상태 업데이트
         function toggleAttendance(index, btnElement) {
             members[index].attendanceChecked = !members[index].attendanceChecked;
             const isChecked = members[index].attendanceChecked;
 
             if (isChecked) {
-                btnElement.className = "px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md bg-blue-600 text-white";
+                btnElement.className = "px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md bg-blue-600 text-white min-w-[90px] text-center";
                 btnElement.innerText = "출석완료";
             } else {
-                btnElement.className = "px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-100 text-gray-500";
+                btnElement.className = "px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-100 text-gray-500 min-w-[90px] text-center";
                 btnElement.innerText = "출석하기";
             }
         }
@@ -301,13 +301,14 @@
                     const isAlreadyChecked = m.attendanceStatus === '출석';
                     
                     if (isAlreadyChecked) {
-                        controlHtml = `<span class="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-bold">출석완료</span>`;
+                        controlHtml = `<span class="text-xs bg-blue-100 text-blue-700 px-4 py-2 rounded-full font-bold">출석완료</span>`;
                     } else {
                         const isChecked = m.attendanceChecked;
+                        // 버튼 패딩을 넓히고(px-5 py-2.5) 최소 너비를 주어 여유 있게 터치 가능하도록 개선
                         const btnBg = isChecked ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-500';
                         const btnText = isChecked ? '출석완료' : '출석하기';
                         controlHtml = `
-                            <button type="button" onclick="toggleAttendance(${originalIndex}, this)" class="px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${btnBg}">
+                            <button type="button" onclick="toggleAttendance(${originalIndex}, this)" class="px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm ${btnBg} min-w-[90px] text-center">
                                 ${btnText}
                             </button>
                         `;
@@ -337,144 +338,3 @@
                                 `;
                             }
                         });
-                    }
-                    heartsContainer += '</div>';
-                    middleHtml = heartsContainer;
-
-                    if (!m.tempActivityCounts) m.tempActivityCounts = {};
-                    const currentCount = m.tempActivityCounts[currentCategory] || 0;
-
-                    controlHtml = `
-                        <div class="flex items-center space-x-2 flex-shrink-0">
-                            <button type="button" onclick="adjustCount(${originalIndex}, -1)" class="w-8 h-8 bg-gray-100 rounded-lg font-bold text-gray-600">-</button>
-                            <span id="cnt_${originalIndex}" class="w-8 text-center font-bold">${currentCount}</span>
-                            <button type="button" onclick="adjustCount(${originalIndex}, 1)" class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg font-bold">+</button>
-                        </div>
-                    `;
-                } else if (currentMode === 'daily-rank') {
-                    const rankIndex = list.indexOf(m) + 1;
-                    const rankBadge = `<span class="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full font-bold mr-2">${rankIndex}위</span>`;
-                    const attBadge = m.attendanceStatus === '출석' ? '<span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">출석완료</span>' : '<span class="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">미출석</span>';
-                    const scoreBadge = `<span class="text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full font-bold">당일 칭찬: ${m.dailyScore || 0}개</span>`;
-
-                    controlHtml = `
-                        <div class="flex items-center space-x-1.5">
-                            ${attBadge}
-                            ${scoreBadge}
-                        </div>
-                    `;
-                    middleHtml = `<div class="flex items-center">${rankBadge}</div>`;
-                } else if (currentMode === 'overall-rank') {
-                    const rankIndex = list.indexOf(m) + 1;
-                    const rankBadge = `<span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded-full font-bold mr-2">${rankIndex}위</span>`;
-                    const rateBadge = `<span class="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-bold">출석률: ${m.attendanceRate || 0}%</span>`;
-                    const totalScoreBadge = `<span class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold">전체 칭찬: ${m.overallScore || 0}개</span>`;
-
-                    controlHtml = `
-                        <div class="flex items-center space-x-1.5">
-                            ${rateBadge}
-                            ${totalScoreBadge}
-                        </div>
-                    `;
-                    middleHtml = `<div class="flex items-center">${rankBadge}</div>`;
-                }
-
-                card.innerHTML = `
-                    <div class="flex items-center flex-shrink-0">
-                        <div>
-                            <div class="font-bold text-gray-800">
-                                <span>${m.이름 || '이름 없음'}</span>
-                            </div>
-                            <div class="text-xs text-gray-400 mt-0.5">${m.회원ID || ''}</div>
-                        </div>
-                    </div>
-                    ${currentMode === 'activity' || currentMode === 'daily-rank' || currentMode === 'overall-rank' ? middleHtml : ''}
-                    ${controlHtml}
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        function adjustCount(index, delta) {
-            if (!members[index].tempActivityCounts) members[index].tempActivityCounts = {};
-            if (!members[index].tempActivityCounts[currentCategory]) members[index].tempActivityCounts[currentCategory] = 0;
-            
-            members[index].tempActivityCounts[currentCategory] += delta;
-            if (members[index].tempActivityCounts[currentCategory] < 0) {
-                members[index].tempActivityCounts[currentCategory] = 0;
-            }
-            
-            const count = members[index].tempActivityCounts[currentCategory];
-            const cntSpan = document.getElementById(`cnt_${index}`);
-            if (cntSpan) cntSpan.innerText = count;
-        }
-
-        async function submitData() {
-            const url = localStorage.getItem('GAS_URL');
-            const customDate = document.getElementById('recordDate').value;
-
-            if (!customDate) {
-                alert('체크할 날짜를 선택해주세요.');
-                return;
-            }
-
-            let queryUrl = `${url}?date=${customDate}`;
-
-            if (currentMode === 'attendance') {
-                let records = [];
-                members.forEach((m) => {
-                    if (m.attendanceStatus === '출석') return; 
-
-                    if (m.attendanceChecked) {
-                        records.push({
-                            memberId: m.회원ID,
-                            name: m.이름,
-                            status: '출석'
-                        });
-                    }
-                });
-
-                if (records.length === 0) {
-                    alert('새로 체크된 출석 인원이 없습니다.');
-                    return;
-                }
-
-                queryUrl += `&action=attendance&records=${encodeURIComponent(JSON.stringify(records))}`;
-            } else if (currentMode === 'activity') {
-                let records = [];
-                members.forEach((m) => {
-                    const count = (m.tempActivityCounts && m.tempActivityCounts[currentCategory]) ? m.tempActivityCounts[currentCategory] : 0;
-                    if (count > 0) {
-                        records.push({
-                            memberId: m.회원ID,
-                            name: m.이름,
-                            count: count
-                        });
-                    }
-                });
-
-                if (records.length === 0) {
-                    alert(`[${currentCategory}] 항목에서 횟수가 0보다 큰 회원이 없습니다.`);
-                    return;
-                }
-
-                queryUrl += `&action=activity&activityName=${encodeURIComponent(currentCategory)}&records=${encodeURIComponent(JSON.stringify(records))}`;
-            }
-
-            try {
-                const response = await fetch(queryUrl);
-                const result = await response.json();
-                if (result.status === 'success') {
-                    alert('성공적으로 저장되었습니다!');
-                    members.forEach(m => { if (m.tempActivityCounts) m.tempActivityCounts = {}; });
-                    loadMembers(); 
-                } else {
-                    alert('저장 실패: ' + (result.message || '알 수 없는 오류'));
-                }
-            } catch (error) {
-                alert('통신 중 오류가 발생했습니다: ' + error);
-            }
-        }
-    </script>
-</body>
-</html>
