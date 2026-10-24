@@ -59,7 +59,7 @@
         <div class="mb-4 space-y-2">
             <input type="text" id="searchInput" oninput="filterMembers()" placeholder="🔍 회원 이름 검색..." class="w-full border p-3 rounded-xl text-sm bg-white shadow-sm">
             
-            <!-- 정렬 버튼 그룹 (5개로 확장) -->
+            <!-- 정렬 버튼 그룹 -->
             <div class="grid grid-cols-5 gap-1">
                 <button type="button" id="sortNameAsc" onclick="setSort('name_asc')" class="py-1.5 text-[10px] font-bold rounded-lg bg-blue-600 text-white shadow-sm">이름순</button>
                 <button type="button" id="sortNameDesc" onclick="setSort('name_desc')" class="py-1.5 text-[10px] font-bold rounded-lg bg-gray-100 text-gray-600">이름역순</button>
@@ -85,7 +85,7 @@
         let members = [];
         let currentMode = 'attendance';
         let currentSort = 'name_asc';
-        let isCustomSorting = false; // 커스텀 정렬 모드 여부
+        let isCustomSorting = false;
         
         let categories = JSON.parse(localStorage.getItem('PATHFINDER_CATS')) || ['찬양', '태도'];
         let currentCategory = categories[0];
@@ -101,6 +101,17 @@
             const month = String(d.getMonth() + 1).padStart(2, '0');
             const day = String(d.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
+        }
+
+        // 날짜를 가져오되 비어있으면 강제로 오늘 날짜를 세팅해주는 안전 함수
+        function getCheckedDate() {
+            const dateInput = document.getElementById('recordDate');
+            let val = dateInput ? dateInput.value : '';
+            if (!val) {
+                val = getTodayString();
+                if (dateInput) dateInput.value = val;
+            }
+            return val;
         }
 
         function getCategoryStyle(cat) {
@@ -120,10 +131,7 @@
         }
 
         window.onload = function() {
-            const dateInput = document.getElementById('recordDate');
-            if (dateInput) {
-                dateInput.value = getTodayString();
-            }
+            getCheckedDate(); // 실행 시점에 날짜 보정
 
             const savedUrl = localStorage.getItem('GAS_URL');
             if (savedUrl) {
@@ -186,7 +194,6 @@
             filterMembers();
         }
 
-        // 일반 정렬 버튼 클릭 시
         function setSort(sortType) {
             isCustomSorting = false;
             const customBtn = document.getElementById('sortCustom');
@@ -210,12 +217,10 @@
             filterMembers();
         }
 
-        // Custom / 완료 버튼 토글 함수
         function toggleCustomSort() {
             isCustomSorting = !isCustomSorting;
             const customBtn = document.getElementById('sortCustom');
 
-            // 다른 일반 정렬 버튼들 색상 초기화
             ['sortNameAsc', 'sortNameDesc', 'sortIdAsc', 'sortIdDesc'].forEach(id => {
                 const btn = document.getElementById(id);
                 if(btn) btn.className = "py-1.5 text-[10px] font-bold rounded-lg bg-gray-100 text-gray-600";
@@ -231,7 +236,6 @@
             filterMembers();
         }
 
-        // 대원 카드 위치 이동 함수 (direction: -1은 앞으로, 1은 뒤로)
         function moveMember(originalIndex, direction) {
             const currentIndex = members.findIndex(m => m._uniqueIndex === originalIndex);
             if (currentIndex === -1) return;
@@ -239,12 +243,10 @@
             const targetIndex = currentIndex + direction;
             if (targetIndex < 0 || targetIndex >= members.length) return;
 
-            // 배열 위치 변경
             const temp = members[currentIndex];
             members[currentIndex] = members[targetIndex];
             members[targetIndex] = temp;
 
-            // 커스텀 순서 저장
             const orderIds = members.map(m => String(m.회원ID));
             localStorage.setItem('PATHFINDER_CUSTOM_ORDER', JSON.stringify(orderIds));
 
@@ -300,13 +302,7 @@
             const url = localStorage.getItem('GAS_URL');
             if (!url) return;
             
-            let recordDateInput = document.getElementById('recordDate');
-            let recordDate = recordDateInput ? recordDateInput.value : '';
-            
-            if (!recordDate) {
-                recordDate = getTodayString();
-                if (recordDateInput) recordDateInput.value = recordDate;
-            }
+            let recordDate = getCheckedDate(); // 안전하게 날짜 확보
 
             const container = document.getElementById('memberListContainer');
             container.innerHTML = '<div class="col-span-4 text-center text-gray-400 py-10 text-sm">회원 명부를 불러오는 중...</div>';
@@ -332,7 +328,6 @@
                     if (!m.tempActivityCounts) m.tempActivityCounts = {};
                 });
 
-                // 저장된 커스텀 순서가 있으면 우선 적용, 없으면 기본 정렬 적용
                 const savedOrder = localStorage.getItem('PATHFINDER_CUSTOM_ORDER');
                 if (savedOrder) {
                     try {
@@ -387,14 +382,14 @@
         }
 
         function toggleAttendanceCard(originalIndex) {
-            if (isCustomSorting) return; // 커스텀 정렬 모드 중에는 체크 방지
+            if (isCustomSorting) return;
             if (members[originalIndex].attendanceStatus === '출석') return; 
             members[originalIndex].attendanceChecked = !members[originalIndex].attendanceChecked;
             filterMembers();
         }
 
         function toggleActivityCard(originalIndex) {
-            if (isCustomSorting) return; // 커스텀 정렬 모드 중에는 체크 방지
+            if (isCustomSorting) return;
             if (!members[originalIndex].tempActivityCounts) {
                 members[originalIndex].tempActivityCounts = {};
             }
@@ -408,132 +403,4 @@
             container.innerHTML = '';
 
             if (list.length === 0) {
-                container.innerHTML = '<div class="col-span-4 text-center text-gray-400 py-10 text-sm">검색된 회원이 없습니다.</div>';
-                return;
-            }
-
-            if (currentMode === 'daily-rank') {
-                list.sort((a, b) => {
-                    const aAtt = a.attendanceStatus === '출석' ? 1 : 0;
-                    const bAtt = b.attendanceStatus === '출석' ? 1 : 0;
-                    if (bAtt !== aAtt) return bAtt - aAtt;
-                    return (b.dailyScore || 0) - (a.dailyScore || 0);
-                });
-            } else if (currentMode === 'overall-rank') {
-                list.sort((a, b) => {
-                    if ((b.attendanceRate || 0) !== (a.attendanceRate || 0)) {
-                        return (b.attendanceRate || 0) - (a.attendanceRate || 0);
-                    }
-                    return (b.overallScore || 0) - (a.overallScore || 0);
-                });
-            }
-
-            list.forEach((m) => {
-                const originalIndex = m._uniqueIndex;
-                const tile = document.createElement('div');
-
-                let subTextHtml = '';
-                let tileClass = '';
-
-                // Custom 정렬 모드일 때 카드 스타일 변경
-                if (isCustomSorting) {
-                    tileClass = 'bg-amber-50 border-2 border-amber-400 p-2 rounded-xl flex flex-col items-center justify-between text-center shadow-md h-24 select-none';
-                    subTextHtml = `
-                        <div class="flex items-center justify-between w-full px-1" onclick="event.stopPropagation()">
-                            <button type="button" onclick="moveMember(${originalIndex}, -1)" class="w-6 h-6 bg-white border text-gray-700 rounded text-xs font-bold shadow-sm flex items-center justify-center hover:bg-gray-100">◀</button>
-                            <span class="text-[9px] font-bold text-amber-700">위치이동</span>
-                            <button type="button" onclick="moveMember(${originalIndex}, 1)" class="w-6 h-6 bg-white border text-gray-700 rounded text-xs font-bold shadow-sm flex items-center justify-center hover:bg-gray-100">▶</button>
-                        </div>
-                    `;
-                } else if (currentMode === 'attendance') {
-                    const isAlreadyChecked = m.attendanceStatus === '출석';
-                    
-                    if (isAlreadyChecked) {
-                        tileClass = 'bg-gray-100 border border-gray-200 p-2 rounded-xl flex flex-col items-center justify-center text-center opacity-70 h-24 select-none';
-                        subTextHtml = `<span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold mt-1">출석완료</span>`;
-                    } else {
-                        const isChecked = m.attendanceChecked;
-                        if (isChecked) {
-                            tileClass = 'bg-blue-50 border-2 border-blue-500 p-2 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer shadow-sm transition-all h-24 select-none';
-                            subTextHtml = `<span class="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-bold mt-1">출석 ✓</span>`;
-                        } else {
-                            tileClass = 'bg-white border border-gray-200 p-2 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer hover:border-gray-300 shadow-sm transition-all h-24 select-none';
-                            subTextHtml = `<span class="text-[10px] text-gray-400 mt-1">미체크</span>`;
-                        }
-                        tile.onclick = () => toggleAttendanceCard(originalIndex);
-                    }
-                } else if (currentMode === 'activity') {
-                    let tempCount = (m.tempActivityCounts && m.tempActivityCounts[currentCategory]) ? m.tempActivityCounts[currentCategory] : 0;
-
-                    if (tempCount > 0) {
-                        tileClass = 'bg-blue-50 border-2 border-blue-500 p-2 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer shadow-sm transition-all h-24 select-none';
-                        subTextHtml = `<span class="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-bold mt-1">+${tempCount}개</span>`;
-                    } else {
-                        tileClass = 'bg-white border border-gray-200 p-2 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer hover:border-gray-300 shadow-sm transition-all h-24 select-none';
-                        subTextHtml = `<span class="text-[10px] text-gray-400 mt-1">미체크</span>`;
-                    }
-                    tile.onclick = () => toggleActivityCard(originalIndex);
-
-                    let saved = (m.activityCounts && m.activityCounts[currentCategory]) || 0;
-                    let total = saved + tempCount;
-                    if (total > 0) {
-                        let style = getCategoryStyle(currentCategory);
-                        if (total <= 4) {
-                            let hearts = '';
-                            for (let h = 0; h < total; h++) {
-                                hearts += `<svg class="w-3 h-3 ${style.text} inline-block" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
-                            }
-                            subTextHtml += `<div class="flex items-center justify-center mt-0.5">${hearts}</div>`;
-                        } else {
-                            subTextHtml += `<div class="text-[10px] font-bold ${style.text} mt-0.5">❤️ ${total}</div>`;
-                        }
-                    }
-
-                } else {
-                    tileClass = 'bg-white border border-gray-200 p-2 rounded-xl flex flex-col items-center justify-center text-center shadow-sm h-24 select-none';
-
-                    if (currentMode === 'daily-rank') {
-                        const rankIndex = list.indexOf(m) + 1;
-                        const rankBadge = `<span class="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full font-bold mb-1">${rankIndex}위</span>`;
-                        const scoreBadge = `<span class="text-[10px] text-purple-700 font-bold mt-1">칭찬: ${m.dailyScore || 0}</span>`;
-                        subTextHtml = `${rankBadge}${scoreBadge}`;
-                    } else if (currentMode === 'overall-rank') {
-                        const rankIndex = list.indexOf(m) + 1;
-                        const rankBadge = `<span class="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded-full font-bold mb-1">${rankIndex}위</span>`;
-                        const rateBadge = `<span class="text-[10px] text-blue-700 font-bold mt-1">출석 ${m.attendanceRate || 0}%</span>`;
-                        subTextHtml = `${rankBadge}${rateBadge}`;
-                    }
-                }
-
-                tile.className = tileClass;
-                tile.innerHTML = `
-                    <div class="font-bold text-xs text-gray-800 truncate w-full px-1">
-                        ${m.이름 || '이름 없음'}
-                    </div>
-                    <div class="text-[10px] text-gray-400 truncate w-full">${m.회원ID || ''}</div>
-                    ${subTextHtml}
-                `;
-                container.appendChild(tile);
-            });
-        }
-
-        async function submitData() {
-            const url = localStorage.getItem('GAS_URL');
-            let recordDateInput = document.getElementById('recordDate');
-            let recordDate = recordDateInput ? recordDateInput.value : '';
-
-            if (!recordDate) {
-                recordDate = getTodayString();
-                if (recordDateInput) recordDateInput.value = recordDate;
-            }
-
-            let queryUrl = `${url}?date=${recordDate}`;
-
-            if (currentMode === 'attendance') {
-                let records = [];
-                members.forEach((m) => {
-                    if (m.attendanceStatus === '출석') return; 
-
-                    if (m.attendanceChecked) {
-                        records.push({
-                            memberId: m.회원ID,
+                container.innerHTML = '<div class="col-span-4 text-center text-gray-400 py
