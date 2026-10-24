@@ -15,8 +15,8 @@
     <header class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
         <h1 class="text-lg font-bold">CS패스파인더</h1>
         <div class="space-x-1">
-            <button onclick="loadMembers()" class="text-xs bg-blue-700 px-2.5 py-1.5 rounded-lg">새로고침</button>
-            <button onclick="toggleSettings()" class="text-xs bg-blue-700 px-2.5 py-1.5 rounded-lg">설정</button>
+            <button type="button" id="btnRefresh" class="text-xs bg-blue-700 px-2.5 py-1.5 rounded-lg">새로고침</button>
+            <button type="button" id="btnSettings" class="text-xs bg-blue-700 px-2.5 py-1.5 rounded-lg">설정</button>
         </div>
     </header>
 
@@ -26,56 +26,44 @@
         <div id="settingsPanel" class="bg-white p-4 rounded-xl shadow-sm mb-4 hidden">
             <label class="block text-xs font-semibold text-gray-600 mb-1">Google Apps Script 웹 앱 URL</label>
             <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/.../exec" class="w-full border p-2 rounded-lg text-sm mb-2">
-            <button onclick="saveUrl()" class="w-full bg-gray-800 text-white py-2 rounded-lg text-sm font-semibold">URL 저장 및 새로고침</button>
+            <button type="button" id="btnSaveUrl" class="w-full bg-gray-800 text-white py-2 rounded-lg text-sm font-semibold">URL 저장 및 새로고침</button>
         </div>
 
         <!-- 모임 정보 입력 카드 -->
         <div class="bg-white p-4 rounded-xl shadow-sm mb-4 space-y-3">
             <div>
                 <label class="block text-xs font-semibold text-gray-600 mb-1">체크 날짜 선택</label>
-                <input type="date" id="recordDate" onchange="loadMembers()" class="w-full border p-2 rounded-lg text-sm bg-white">
-                <script>
-                    (function() {
-                        const d = new Date();
-                        const year = d.getFullYear();
-                        const month = String(d.getMonth() + 1).padStart(2, '0');
-                        const day = String(d.getDate()).padStart(2, '0');
-                        const el = document.getElementById('recordDate');
-                        if (el) el.value = `${year}-${month}-${day}`;
-                    })();
-                </script>
+                <input type="date" id="recordDate" class="w-full border p-2 rounded-lg text-sm bg-white">
             </div>
 
             <div>
                 <label class="block text-xs font-semibold text-gray-600 mb-1">모드 선택</label>
                 <div class="grid grid-cols-2 gap-2">
-                    <button type="button" id="btnAttendance" onclick="setMode('attendance')" class="py-2.5 rounded-xl font-bold text-sm transition-all bg-blue-600 text-white shadow-sm">출석 체크</button>
-                    <button type="button" id="btnActivity" onclick="setMode('activity')" class="py-2.5 rounded-xl font-bold text-sm transition-all bg-gray-100 text-gray-600">칭찬</button>
-                    <button type="button" id="btnDailyRank" onclick="setMode('daily-rank')" class="py-2.5 rounded-xl font-bold text-sm transition-all bg-gray-100 text-gray-600">일일 순위</button>
-                    <button type="button" id="btnOverallRank" onclick="setMode('overall-rank')" class="py-2.5 rounded-xl font-bold text-sm transition-all bg-gray-100 text-gray-600">전체 순위</button>
+                    <button type="button" id="btnAttendance" class="py-2.5 rounded-xl font-bold text-sm transition-all bg-blue-600 text-white shadow-sm">출석 체크</button>
+                    <button type="button" id="btnActivity" class="py-2.5 rounded-xl font-bold text-sm transition-all bg-gray-100 text-gray-600">칭찬</button>
+                    <button type="button" id="btnDailyRank" class="py-2.5 rounded-xl font-bold text-sm transition-all bg-gray-100 text-gray-600">일일 순위</button>
+                    <button type="button" id="btnOverallRank" class="py-2.5 rounded-xl font-bold text-sm transition-all bg-gray-100 text-gray-600">전체 순위</button>
                 </div>
             </div>
             
             <!-- 칭찬 항목 선택 영역 -->
             <div id="categoryContainer" class="hidden space-y-2 pt-1">
                 <label class="block text-xs font-semibold text-gray-600">칭찬 항목 선택</label>
-                <div id="categoryButtons" class="flex flex-wrap gap-1.5">
-                    <!-- 자바스크립트로 버튼 생성 -->
-                </div>
+                <div id="categoryButtons" class="flex flex-wrap gap-1.5"></div>
             </div>
         </div>
 
         <!-- 회원 검색창 및 정렬 기능 영역 -->
         <div class="mb-4 space-y-2">
-            <input type="text" id="searchInput" oninput="filterMembers()" placeholder="🔍 회원 이름 검색..." class="w-full border p-3 rounded-xl text-sm bg-white shadow-sm">
+            <input type="text" id="searchInput" placeholder="🔍 회원 이름 검색..." class="w-full border p-3 rounded-xl text-sm bg-white shadow-sm">
             
             <!-- 정렬 버튼 그룹 -->
             <div class="grid grid-cols-5 gap-1">
-                <button type="button" id="sortNameAsc" onclick="setSort('name_asc')" class="py-1.5 text-[10px] font-bold rounded-lg bg-blue-600 text-white shadow-sm">이름순</button>
-                <button type="button" id="sortNameDesc" onclick="setSort('name_desc')" class="py-1.5 text-[10px] font-bold rounded-lg bg-gray-100 text-gray-600">이름역순</button>
-                <button type="button" id="sortIdAsc" onclick="setSort('id_asc')" class="py-1.5 text-[10px] font-bold rounded-lg bg-gray-100 text-gray-600">ID순</button>
-                <button type="button" id="sortIdDesc" onclick="setSort('id_desc')" class="py-1.5 text-[10px] font-bold rounded-lg bg-gray-100 text-gray-600">ID역순</button>
-                <button type="button" id="sortCustom" onclick="toggleCustomSort()" class="py-1.5 text-[10px] font-bold rounded-lg bg-gray-100 text-gray-600">Custom</button>
+                <button type="button" id="sortNameAsc" class="py-1.5 text-[10px] font-bold rounded-lg bg-blue-600 text-white shadow-sm">이름순</button>
+                <button type="button" id="sortNameDesc" class="py-1.5 text-[10px] font-bold rounded-lg bg-gray-100 text-gray-600">이름역순</button>
+                <button type="button" id="sortIdAsc" class="py-1.5 text-[10px] font-bold rounded-lg bg-gray-100 text-gray-600">ID순</button>
+                <button type="button" id="sortIdDesc" class="py-1.5 text-[10px] font-bold rounded-lg bg-gray-100 text-gray-600">ID역순</button>
+                <button type="button" id="sortCustom" class="py-1.5 text-[10px] font-bold rounded-lg bg-gray-100 text-gray-600">Custom</button>
             </div>
         </div>
 
@@ -88,20 +76,49 @@
 
     <!-- 하단 고정 저장 버튼 -->
     <div id="footerBar" class="fixed bottom-0 left-0 right-0 bg-white border-t p-3 max-w-md mx-auto shadow-lg z-10">
-        <button onclick="submitData()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-center text-sm shadow-md">전송 및 저장하기</button>
+        <button type="button" id="btnSubmit" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-center text-sm shadow-md">전송 및 저장하기</button>
     </div>
 
     <script>
-        let members = [];
-        let currentMode = 'attendance';
-        let currentSort = 'name_asc';
-        let isCustomSorting = false;
+        window.onerror = function(msg, url, lineNo) {
+            var container = document.getElementById('memberListContainer');
+            if (container) {
+                container.innerHTML = '<div class="col-span-4 text-center text-red-600 py-6 text-xs font-bold bg-red-50 rounded-xl p-3">스크립트 오류 발생 (줄 ' + lineNo + '):<br>' + msg + '</div>';
+            }
+            return false;
+        };
+
+        var memoryStore = {};
+        var safeStorage = {
+            getItem: function(key) {
+                try {
+                    return window.localStorage.getItem(key);
+                } catch (e) {
+                    return memoryStore[key] || null;
+                }
+            },
+            setItem: function(key, val) {
+                try {
+                    window.localStorage.setItem(key, val);
+                } catch (e) {
+                    memoryStore[key] = String(val);
+                }
+            }
+        };
+
+        // ★ 고정된 Google Apps Script 웹 앱 URL이 있다면 아래 따옴표 안에 넣으세요.
+        var DEFAULT_GAS_URL = "";
+
+        var members = [];
+        var currentMode = 'attendance';
+        var currentSort = 'name_asc';
+        var isCustomSorting = false;
         
-        let categories = ['찬양', '태도'];
+        var categories = ['찬양', '태도'];
         try {
-            const savedCats = localStorage.getItem('PATHFINDER_CATS');
+            var savedCats = safeStorage.getItem('PATHFINDER_CATS');
             if (savedCats) {
-                const parsed = JSON.parse(savedCats);
+                var parsed = JSON.parse(savedCats);
                 if (Array.isArray(parsed) && parsed.length > 0) {
                     categories = parsed;
                 }
@@ -109,24 +126,24 @@
         } catch (e) {
             console.error("카테고리 로드 오류:", e);
         }
-        let currentCategory = categories[0];
+        var currentCategory = categories[0];
 
-        const categoryColorMap = {
+        var categoryColorMap = {
             '찬양': { text: 'text-rose-500', badgeBg: 'bg-rose-50 text-rose-600' },
             '태도': { text: 'text-amber-500', badgeBg: 'bg-amber-50 text-amber-600' }
         };
 
         function getTodayString() {
-            const d = new Date();
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
+            var d = new Date();
+            var year = d.getFullYear();
+            var month = String(d.getMonth() + 1).padStart(2, '0');
+            var day = String(d.getDate()).padStart(2, '0');
+            return year + '-' + month + '-' + day;
         }
 
         function getCheckedDate() {
-            const dateInput = document.getElementById('recordDate');
-            let val = dateInput ? dateInput.value : '';
+            var dateInput = document.getElementById('recordDate');
+            var val = dateInput ? dateInput.value : '';
             if (!val) {
                 val = getTodayString();
                 if (dateInput) dateInput.value = val;
@@ -136,66 +153,68 @@
 
         function getCategoryStyle(cat) {
             if (!categoryColorMap[cat]) {
-                const palette = [
+                var palette = [
                     { text: 'text-blue-500', badgeBg: 'bg-blue-50 text-blue-600' },
                     { text: 'text-emerald-500', badgeBg: 'bg-emerald-50 text-emerald-600' },
                     { text: 'text-purple-500', badgeBg: 'bg-purple-50 text-purple-700' },
                     { text: 'text-teal-500', badgeBg: 'bg-teal-50 text-teal-600' },
                     { text: 'text-indigo-500', badgeBg: 'bg-indigo-50 text-indigo-600' }
                 ];
-                let hash = 0;
-                for (let i = 0; i < cat.length; i++) hash += cat.charCodeAt(i);
+                var hash = 0;
+                for (var i = 0; i < cat.length; i++) hash += cat.charCodeAt(i);
                 categoryColorMap[cat] = palette[hash % palette.length];
             }
             return categoryColorMap[cat];
         }
 
         function toggleSettings() {
-            const panel = document.getElementById('settingsPanel');
-            panel.classList.toggle('hidden');
+            var panel = document.getElementById('settingsPanel');
+            if (panel) panel.classList.toggle('hidden');
         }
 
         function saveUrl() {
-            const url = document.getElementById('scriptUrl').value.trim();
+            var input = document.getElementById('scriptUrl');
+            var url = input ? input.value.trim() : '';
             if (!url) {
                 alert('URL을 입력해주세요.');
                 return;
             }
-            localStorage.setItem('GAS_URL', url);
-            alert('저장되었습니다!');
-            location.reload();
+            safeStorage.setItem('GAS_URL', url);
+            var panel = document.getElementById('settingsPanel');
+            if (panel) panel.classList.add('hidden');
+            loadMembers();
         }
 
         function setMode(mode) {
             currentMode = mode;
-            const btnAtt = document.getElementById('btnAttendance');
-            const btnAct = document.getElementById('btnActivity');
-            const btnDaily = document.getElementById('btnDailyRank');
-            const btnOverall = document.getElementById('btnOverallRank');
-            const catContainer = document.getElementById('categoryContainer');
-            const footerBar = document.getElementById('footerBar');
+            var btnAtt = document.getElementById('btnAttendance');
+            var btnAct = document.getElementById('btnActivity');
+            var btnDaily = document.getElementById('btnDailyRank');
+            var btnOverall = document.getElementById('btnOverallRank');
+            var catContainer = document.getElementById('categoryContainer');
+            var footerBar = document.getElementById('footerBar');
 
-            [btnAtt, btnAct, btnDaily, btnOverall].forEach(btn => {
-                btn.className = "py-2.5 rounded-xl font-bold text-sm transition-all bg-gray-100 text-gray-600";
+            [btnAtt, btnAct, btnDaily, btnOverall].forEach(function(btn) {
+                if (btn) btn.className = "py-2.5 rounded-xl font-bold text-sm transition-all bg-gray-100 text-gray-600";
             });
 
             if (mode === 'attendance') {
-                btnAtt.className = "py-2.5 rounded-xl font-bold text-sm transition-all bg-blue-600 text-white shadow-sm";
-                catContainer.classList.add('hidden');
-                footerBar.classList.remove('hidden');
+                if (btnAtt) btnAtt.className = "py-2.5 rounded-xl font-bold text-sm transition-all bg-blue-600 text-white shadow-sm";
+                if (catContainer) catContainer.classList.add('hidden');
+                if (footerBar) footerBar.classList.remove('hidden');
             } else if (mode === 'activity') {
-                btnAct.className = "py-2.5 rounded-xl font-bold text-sm transition-all bg-blue-600 text-white shadow-sm";
-                catContainer.classList.remove('hidden');
+                if (btnAct) btnAct.className = "py-2.5 rounded-xl font-bold text-sm transition-all bg-blue-600 text-white shadow-sm";
+                if (catContainer) catContainer.classList.remove('hidden');
                 renderCategoryButtons();
-                footerBar.classList.remove('hidden');
+                if (footerBar) footerBar.classList.remove('hidden');
             } else if (mode === 'daily-rank') {
-                btnDaily.className = "py-2.5 rounded-xl font-bold text-sm transition-all bg-blue-600 text-white shadow-sm";
-                catContainer.classList.add('hidden');
-                footerBar.classList.add('hidden');
+                if (btnDaily) btnDaily.className = "py-2.5 rounded-xl font-bold text-sm transition-all bg-blue-600 text-white shadow-sm";
+                if (catContainer) catContainer.classList.add('hidden');
+                if (footerBar) footerBar.classList.add('hidden');
             } else if (mode === 'overall-rank') {
-                btnOverall.className = "py-2.5 rounded-xl font-bold text-sm transition-all bg-blue-600 text-white shadow-sm";
-                catContainer.classList.add('hidden');
-                footerBar.classList.add('hidden');
+                if (btnOverall) btnOverall.className = "py-2.5 rounded-xl font-bold text-sm transition-all bg-blue-600 text-white shadow-sm";
+                if (catContainer) catContainer.classList.add('hidden');
+                if (footerBar) footerBar.classList.add('hidden');
             }
 
             filterMembers();
@@ -203,16 +222,515 @@
 
         function setSort(sortType) {
             isCustomSorting = false;
-            const customBtn = document.getElementById('sortCustom');
+            var customBtn = document.getElementById('sortCustom');
             if (customBtn) {
                 customBtn.innerText = "Custom";
                 customBtn.className = "py-1.5 text-[10px] font-bold rounded-lg bg-gray-100 text-gray-600";
             }
 
             currentSort = sortType;
-            ['sortNameAsc', 'sortNameDesc', 'sortIdAsc', 'sortIdDesc'].forEach(id => {
-                const btn = document.getElementById(id);
+            ['sortNameAsc', 'sortNameDesc', 'sortIdAsc', 'sortIdDesc'].forEach(function(id) {
+                var btn = document.getElementById(id);
                 if (btn) btn.className = "py-1.5 text-[10px] font-bold rounded-lg bg-gray-100 text-gray-600";
             });
 
-            if 
+            if (sortType === 'name_asc') document.getElementById('sortNameAsc').className = "py-1.5 text-[10px] font-bold rounded-lg bg-blue-600 text-white shadow-sm";
+            if (sortType === 'name_desc') document.getElementById('sortNameDesc').className = "py-1.5 text-[10px] font-bold rounded-lg bg-blue-600 text-white shadow-sm";
+            if (sortType === 'id_asc') document.getElementById('sortIdAsc').className = "py-1.5 text-[10px] font-bold rounded-lg bg-blue-600 text-white shadow-sm";
+            if (sortType === 'id_desc') document.getElementById('sortIdDesc').className = "py-1.5 text-[10px] font-bold rounded-lg bg-blue-600 text-white shadow-sm";
+
+            applySorting();
+            filterMembers();
+        }
+
+        function toggleCustomSort() {
+            isCustomSorting = !isCustomSorting;
+            var customBtn = document.getElementById('sortCustom');
+
+            ['sortNameAsc', 'sortNameDesc', 'sortIdAsc', 'sortIdDesc'].forEach(function(id) {
+                var btn = document.getElementById(id);
+                if (btn) btn.className = "py-1.5 text-[10px] font-bold rounded-lg bg-gray-100 text-gray-600";
+            });
+
+            if (isCustomSorting) {
+                customBtn.innerText = "완료";
+                customBtn.className = "py-1.5 text-[10px] font-bold rounded-lg bg-amber-500 text-white shadow-sm animate-pulse";
+            } else {
+                customBtn.innerText = "Custom";
+                customBtn.className = "py-1.5 text-[10px] font-bold rounded-lg bg-gray-100 text-gray-600";
+            }
+            filterMembers();
+        }
+
+        function moveMember(uniqueId, direction) {
+            var currentIndex = members.findIndex(function(m) { return m._uniqueIndex === uniqueId; });
+            if (currentIndex === -1) return;
+
+            var targetIndex = currentIndex + direction;
+            if (targetIndex < 0 || targetIndex >= members.length) return;
+
+            var temp = members[currentIndex];
+            members[currentIndex] = members[targetIndex];
+            members[targetIndex] = temp;
+
+            var orderIds = members.map(function(m) { return String(m.회원ID); });
+            safeStorage.setItem('PATHFINDER_CUSTOM_ORDER', JSON.stringify(orderIds));
+
+            filterMembers();
+        }
+
+        function toggleAttendanceCard(uniqueId) {
+            if (isCustomSorting) return;
+            var member = members.find(function(m) { return m._uniqueIndex === uniqueId; });
+            if (!member) return;
+            if (member.attendanceStatus === '출석') return;
+            
+            member.attendanceChecked = !member.attendanceChecked;
+            filterMembers();
+        }
+
+        function toggleActivityCard(uniqueId) {
+            if (isCustomSorting) return;
+            var member = members.find(function(m) { return m._uniqueIndex === uniqueId; });
+            if (!member) return;
+
+            if (!member.tempActivityCounts) member.tempActivityCounts = {};
+            var currentVal = member.tempActivityCounts[currentCategory] || 0;
+            member.tempActivityCounts[currentCategory] = currentVal + 1;
+            filterMembers();
+        }
+
+        function changeActivityCount(uniqueId, delta) {
+            var member = members.find(function(m) { return m._uniqueIndex === uniqueId; });
+            if (!member) return;
+            if (!member.tempActivityCounts) member.tempActivityCounts = {};
+
+            var currentTemp = member.tempActivityCounts[currentCategory] || 0;
+            if (currentTemp + delta < 0) return;
+
+            member.tempActivityCounts[currentCategory] = currentTemp + delta;
+            filterMembers();
+        }
+
+        function renderCategoryButtons() {
+            var container = document.getElementById('categoryButtons');
+            if (!container) return;
+            container.innerHTML = '';
+
+            categories.forEach(function(cat) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.innerText = cat;
+                if (cat === currentCategory) {
+                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white shadow-sm';
+                } else {
+                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-600 hover:bg-gray-200';
+                }
+                btn.onclick = function() {
+                    currentCategory = cat;
+                    renderCategoryButtons();
+                    filterMembers();
+                };
+                container.appendChild(btn);
+            });
+
+            var addBtn = document.createElement('button');
+            addBtn.type = 'button';
+            addBtn.innerText = '+ 추가';
+            addBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100';
+            addBtn.onclick = addNewCategory;
+            container.appendChild(addBtn);
+        }
+
+        function addNewCategory() {
+            var newCat = prompt('추가할 새로운 칭찬 항목 이름을 입력하세요:');
+            if (newCat && newCat.trim() !== '') {
+                var trimmed = newCat.trim();
+                if (!categories.includes(trimmed)) {
+                    categories.push(trimmed);
+                    safeStorage.setItem('PATHFINDER_CATS', JSON.stringify(categories));
+                    currentCategory = trimmed;
+                    renderCategoryButtons();
+                    filterMembers();
+                } else {
+                    alert('이미 존재하는 항목입니다.');
+                }
+            }
+        }
+
+        async function loadMembers() {
+            var url = safeStorage.getItem('GAS_URL') || DEFAULT_GAS_URL;
+            var container = document.getElementById('memberListContainer');
+
+            if (!url || url.trim() === '') {
+                var panel = document.getElementById('settingsPanel');
+                if (panel) panel.classList.remove('hidden');
+                if (container) {
+                    container.innerHTML = '<div class="col-span-4 text-center text-gray-600 py-8 text-sm font-bold bg-amber-50 border border-amber-200 rounded-xl p-4">👆 위 [Google Apps Script 웹 앱 URL] 칸에 주소를 입력하고 저장해주세요.</div>';
+                }
+                return;
+            }
+            
+            var recordDate = getCheckedDate();
+            if (container) {
+                container.innerHTML = '<div class="col-span-4 text-center text-blue-500 py-10 text-sm font-bold animate-pulse">회원 명부를 서버에서 불러오는 중입니다...</div>';
+            }
+
+            var controller = new AbortController();
+            var timeoutId = setTimeout(function() { controller.abort(); }, 15000);
+
+            try {
+                var sep = url.indexOf('?') === -1 ? '?' : '&';
+                var response = await fetch(url + sep + 'date=' + encodeURIComponent(recordDate), { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (!response.ok) throw new Error('서버 응답 오류 (상태코드: ' + response.status + ')');
+                var rawData = await response.json();
+                
+                if (Array.isArray(rawData)) {
+                    members = rawData;
+                } else if (rawData && Array.isArray(rawData.members)) {
+                    members = rawData.members;
+                } else if (rawData && Array.isArray(rawData.data)) {
+                    members = rawData.data;
+                } else {
+                    members = [];
+                }
+                
+                if (members.length === 0) {
+                    container.innerHTML = '<div class="col-span-4 text-center text-gray-400 py-10 text-sm">등록된 회원이 없습니다.</div>';
+                    return;
+                }
+
+                members.forEach(function(m, idx) {
+                    m._uniqueIndex = idx;
+                    var foundName = m['이름'] || m['성명'] || m['대원이름'] || m['대원명'] || m['name'] || m['Name'] || '';
+                    var foundId = m['회원ID'] || m['ID'] || m['id'] || m['대원ID'] || m['번호'] || '';
+                    
+                    if (!foundName) {
+                        var keys = Object.keys(m);
+                        for (var k = 0; k < keys.length; k++) {
+                            if (keys[k].indexOf('이름') !== -1 || keys[k].toLowerCase().indexOf('name') !== -1) {
+                                foundName = m[keys[k]];
+                                break;
+                            }
+                        }
+                    }
+
+                    m.이름 = String(foundName).trim();
+                    m.회원ID = String(foundId).trim();
+                    m.attendanceChecked = (m.attendanceStatus === '출석');
+                    if (!m.tempActivityCounts) m.tempActivityCounts = {};
+                });
+
+                var savedOrder = safeStorage.getItem('PATHFINDER_CUSTOM_ORDER');
+                if (savedOrder) {
+                    try {
+                        var orderIds = JSON.parse(savedOrder);
+                        members.sort(function(a, b) {
+                            var ia = orderIds.indexOf(String(a.회원ID));
+                            var ib = orderIds.indexOf(String(b.회원ID));
+                            if (ia === -1) ia = 9999;
+                            if (ib === -1) ib = 9999;
+                            return ia - ib;
+                        });
+                    } catch (e) {
+                        applySorting();
+                    }
+                } else {
+                    applySorting();
+                }
+
+                filterMembers();
+            } catch (error) {
+                clearTimeout(timeoutId);
+                console.error(error);
+                if (error.name === 'AbortError') {
+                    container.innerHTML = '<div class="col-span-4 text-center text-red-500 py-10 text-sm font-bold">로드 실패: 서버 응답 시간(15초) 초과. URL이나 네트워크를 확인하세요.</div>';
+                } else {
+                    container.innerHTML = '<div class="col-span-4 text-center text-red-500 py-10 text-sm font-bold">로드 실패: ' + error.message + '</div>';
+                }
+            }
+        }
+
+        function applySorting() {
+            if (currentMode !== 'daily-rank' && currentMode !== 'overall-rank') {
+                members.sort(function(a, b) {
+                    if (currentSort === 'name_asc') {
+                        return String(a.이름 || '').localeCompare(String(b.이름 || ''));
+                    } else if (currentSort === 'name_desc') {
+                        return String(b.이름 || '').localeCompare(String(a.이름 || ''));
+                    } else if (currentSort === 'id_asc') {
+                        return String(a.회원ID || '').localeCompare(String(b.회원ID || ''), undefined, {numeric: true});
+                    } else if (currentSort === 'id_desc') {
+                        return String(b.회원ID || '').localeCompare(String(a.회원ID || ''), undefined, {numeric: true});
+                    }
+                    return 0;
+                });
+            }
+        }
+
+        function filterMembers() {
+            var searchEl = document.getElementById('searchInput');
+            var keyword = searchEl ? searchEl.value.trim().toLowerCase() : '';
+            
+            var list = members.filter(function(m) {
+                if (!keyword) return true;
+                var memberName = String(m.이름 || '').toLowerCase();
+                var memberId = String(m.회원ID || '').toLowerCase();
+                return memberName.indexOf(keyword) !== -1 || memberId.indexOf(keyword) !== -1;
+            });
+            renderMembers(list);
+        }
+
+        function renderMembers(list) {
+            var container = document.getElementById('memberListContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (list.length === 0) {
+                if (members.length === 0) {
+                    container.innerHTML = '<div class="col-span-4 text-center text-gray-400 py-10 text-sm">불러온 회원 명단이 없습니다. 상단 [설정]에서 URL을 확인해주세요.</div>';
+                } else {
+                    container.innerHTML = '<div class="col-span-4 text-center text-gray-400 py-10 text-sm">검색된 회원이 없습니다.</div>';
+                }
+                return;
+            }
+
+            if (currentMode === 'daily-rank') {
+                list.sort(function(a, b) {
+                    var aAtt = a.attendanceStatus === '출석' ? 1 : 0;
+                    var bAtt = b.attendanceStatus === '출석' ? 1 : 0;
+                    if (bAtt !== aAtt) return bAtt - aAtt;
+                    return (b.dailyScore || 0) - (a.dailyScore || 0);
+                });
+            } else if (currentMode === 'overall-rank') {
+                list.sort(function(a, b) {
+                    if ((b.attendanceRate || 0) !== (a.attendanceRate || 0)) {
+                        return (b.attendanceRate || 0) - (a.attendanceRate || 0);
+                    }
+                    return (b.overallScore || 0) - (a.overallScore || 0);
+                });
+            }
+
+            list.forEach(function(m) {
+                var uniqueId = m._uniqueIndex;
+                var tile = document.createElement('div');
+                tile.style.position = 'relative';
+
+                var subTextHtml = '';
+                var tileClass = 'bg-white border border-gray-200 p-2 rounded-xl flex flex-col items-center justify-between text-center shadow-sm h-24 select-none';
+
+                if (isCustomSorting) {
+                    tileClass = 'bg-amber-50 border-2 border-amber-400 p-2 rounded-xl flex flex-col items-center justify-between text-center shadow-md h-24 select-none';
+                    subTextHtml = 
+                        '<div class="flex items-center justify-between w-full px-1">' +
+                            '<button type="button" onclick="event.stopPropagation(); moveMember(' + uniqueId + ', -1)" class="w-6 h-6 bg-white border text-gray-700 rounded text-xs font-bold shadow-sm flex items-center justify-center hover:bg-gray-100">◀</button>' +
+                            '<span class="text-[9px] font-bold text-amber-700">이동</span>' +
+                            '<button type="button" onclick="event.stopPropagation(); moveMember(' + uniqueId + ', 1)" class="w-6 h-6 bg-white border text-gray-700 rounded text-xs font-bold shadow-sm flex items-center justify-center hover:bg-gray-100">▶</button>' +
+                        '</div>';
+                } else if (currentMode === 'attendance') {
+                    var isAlreadyChecked = m.attendanceStatus === '출석';
+                    
+                    if (isAlreadyChecked) {
+                        tileClass = 'bg-gray-100 border border-gray-200 p-2 rounded-xl flex flex-col items-center justify-between text-center opacity-70 h-24 select-none';
+                        subTextHtml = '<span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold mt-1">출석완료</span>';
+                    } else {
+                        var isChecked = m.attendanceChecked;
+                        if (isChecked) {
+                            tileClass = 'bg-blue-50 border-2 border-blue-500 p-2 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer shadow-sm transition-all h-24 select-none';
+                            subTextHtml = '<span class="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-bold mt-1">출석 ✓</span>';
+                        } else {
+                            tileClass = 'bg-white border border-gray-200 p-2 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer hover:border-gray-300 shadow-sm transition-all h-24 select-none';
+                            subTextHtml = '<span class="text-[10px] text-gray-400 mt-1">미체크</span>';
+                        }
+                        tile.onclick = function() { toggleAttendanceCard(uniqueId); };
+                    }
+                } else if (currentMode === 'activity') {
+                    var tempCount = (m.tempActivityCounts && m.tempActivityCounts[currentCategory]) ? m.tempActivityCounts[currentCategory] : 0;
+                    var saved = (m.activityCounts && m.activityCounts[currentCategory]) || 0;
+                    var total = saved + tempCount;
+
+                    if (tempCount > 0) {
+                        tileClass = 'bg-blue-50 border-2 border-blue-500 p-2 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer shadow-sm transition-all h-24 select-none relative';
+                    } else {
+                        tileClass = 'bg-white border border-gray-200 p-2 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer hover:border-gray-300 shadow-sm transition-all h-24 select-none relative';
+                    }
+                    
+                    tile.onclick = function() { toggleActivityCard(uniqueId); };
+
+                    var heartsContainer = '';
+                    if (total > 0) {
+                        var style = getCategoryStyle(currentCategory);
+                        if (total <= 3) {
+                            var hearts = '';
+                            for (var h = 0; h < total; h++) {
+                                hearts += '<svg class="w-3 h-3 ' + style.text + ' inline-block" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
+                            }
+                            heartsContainer = '<div class="flex items-center justify-center mt-1">' + hearts + '</div>';
+                        } else {
+                            heartsContainer = '<div class="text-[10px] font-bold ' + style.text + ' mt-1">❤️ ' + total + '</div>';
+                        }
+                    } else {
+                        heartsContainer = '<span class="text-[10px] text-gray-400 mt-1">미체크</span>';
+                    }
+
+                    var minusBtn = '';
+                    if (tempCount > 0) {
+                        minusBtn = '<button type="button" onclick="event.stopPropagation(); changeActivityCount(' + uniqueId + ', -1)" class="absolute bottom-1.5 left-1.5 w-5 h-5 bg-white border border-gray-200 text-red-500 rounded text-xs font-bold flex items-center justify-center hover:bg-red-50 shadow-sm z-10">-</button>';
+                    }
+
+                    subTextHtml = 
+                        '<div class="w-full flex flex-col items-center pointer-events-none">' +
+                            heartsContainer +
+                            (tempCount > 0 ? '<span class="text-[9px] font-bold text-blue-600 mt-0.5">+' + tempCount + '</span>' : '') +
+                        '</div>' +
+                        minusBtn;
+                } else {
+                    if (currentMode === 'daily-rank') {
+                        var rankIndex = list.indexOf(m) + 1;
+                        var rankBadge = '<span class="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full font-bold mb-1">' + rankIndex + '위</span>';
+                        var scoreBadge = '<span class="text-[10px] text-purple-700 font-bold mt-1">칭찬: ' + (m.dailyScore || 0) + '</span>';
+                        subTextHtml = rankBadge + scoreBadge;
+                    } else if (currentMode === 'overall-rank') {
+                        var rankIndex2 = list.indexOf(m) + 1;
+                        var rankBadge2 = '<span class="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded-full font-bold mb-1">' + rankIndex2 + '위</span>';
+                        var rateBadge = '<span class="text-[10px] text-blue-700 font-bold mt-1">출석 ' + (m.attendanceRate || 0) + '%</span>';
+                        subTextHtml = rankBadge2 + rateBadge;
+                    }
+                }
+
+                tile.className = tileClass;
+                tile.innerHTML = 
+                    '<div class="font-bold text-xs text-gray-800 truncate w-full px-1 pointer-events-none mt-1">' +
+                        (m.이름 || '이름 없음') +
+                    '</div>' +
+                    '<div class="text-[10px] text-gray-400 truncate w-full pointer-events-none">' + (m.회원ID || '') + '</div>' +
+                    subTextHtml;
+                container.appendChild(tile);
+            });
+        }
+
+        async function submitData() {
+            var url = safeStorage.getItem('GAS_URL') || DEFAULT_GAS_URL;
+            if (!url) {
+                alert('먼저 상단 [설정]에서 구글 스크립트 URL을 저장해주세요.');
+                return;
+            }
+            var recordDate = getCheckedDate();
+            var sep = url.indexOf('?') === -1 ? '?' : '&';
+            var queryUrl = url + sep + 'date=' + encodeURIComponent(recordDate);
+
+            if (currentMode === 'attendance') {
+                var records = [];
+                members.forEach(function(m) {
+                    if (m.attendanceStatus === '출석') return; 
+
+                    if (m.attendanceChecked) {
+                        records.push({
+                            memberId: m.회원ID,
+                            name: m.이름,
+                            status: '출석'
+                        });
+                    }
+                });
+
+                if (records.length === 0) {
+                    alert('새로 체크된 출석 인원이 없습니다.');
+                    return;
+                }
+
+                queryUrl += '&action=attendance&records=' + encodeURIComponent(JSON.stringify(records));
+            } else if (currentMode === 'activity') {
+                var recordsAct = [];
+                members.forEach(function(m) {
+                    var count = (m.tempActivityCounts && m.tempActivityCounts[currentCategory]) ? m.tempActivityCounts[currentCategory] : 0;
+                    if (count !== 0) {
+                        recordsAct.push({
+                            memberId: m.회원ID,
+                            name: m.이름,
+                            count: count
+                        });
+                    }
+                });
+
+                if (recordsAct.length === 0) {
+                    alert('[' + currentCategory + '] 항목에서 변경된 칭찬 스티커 내역이 없습니다.');
+                    return;
+                }
+
+                queryUrl += '&action=activity&activityName=' + encodeURIComponent(currentCategory) + '&records=' + encodeURIComponent(JSON.stringify(recordsAct));
+            }
+
+            try {
+                var response = await fetch(queryUrl);
+                var result = await response.json();
+                if (result.status === 'success') {
+                    alert('성공적으로 저장되었습니다!');
+                    
+                    members.forEach(function(m) { 
+                        if (currentMode === 'attendance' && m.attendanceChecked) {
+                            m.attendanceStatus = '출석';
+                        }
+                        if (currentMode === 'activity' && m.tempActivityCounts) {
+                            if (!m.activityCounts) m.activityCounts = {};
+                            if (m.tempActivityCounts[currentCategory]) {
+                                m.activityCounts[currentCategory] = (m.activityCounts[currentCategory] || 0) + m.tempActivityCounts[currentCategory];
+                                m.tempActivityCounts[currentCategory] = 0;
+                            }
+                        }
+                    });
+                    
+                    filterMembers();
+                } else {
+                    alert('저장 실패: ' + (result.message || '알 수 없는 오류'));
+                }
+            } catch (error) {
+                alert('통신 중 오류가 발생했습니다: ' + error);
+            }
+        }
+
+        function bindEventsAndInit() {
+            var elDate = document.getElementById('recordDate');
+            if (elDate && !elDate.value) {
+                elDate.value = getTodayString();
+            }
+            if (elDate) elDate.onchange = loadMembers;
+
+            document.getElementById('btnRefresh').onclick = loadMembers;
+            document.getElementById('btnSettings').onclick = toggleSettings;
+            document.getElementById('btnSaveUrl').onclick = saveUrl;
+
+            document.getElementById('btnAttendance').onclick = function() { setMode('attendance'); };
+            document.getElementById('btnActivity').onclick = function() { setMode('activity'); };
+            document.getElementById('btnDailyRank').onclick = function() { setMode('daily-rank'); };
+            document.getElementById('btnOverallRank').onclick = function() { setMode('overall-rank'); };
+
+            var searchInput = document.getElementById('searchInput');
+            searchInput.oninput = filterMembers;
+            searchInput.onkeyup = filterMembers;
+
+            document.getElementById('sortNameAsc').onclick = function() { setSort('name_asc'); };
+            document.getElementById('sortNameDesc').onclick = function() { setSort('name_desc'); };
+            document.getElementById('sortIdAsc').onclick = function() { setSort('id_asc'); };
+            document.getElementById('sortIdDesc').onclick = function() { setSort('id_desc'); };
+            document.getElementById('sortCustom').onclick = toggleCustomSort;
+
+            document.getElementById('btnSubmit').onclick = submitData;
+
+            var savedUrl = safeStorage.getItem('GAS_URL') || DEFAULT_GAS_URL;
+            var urlInput = document.getElementById('scriptUrl');
+            if (savedUrl && urlInput) {
+                urlInput.value = savedUrl;
+            }
+            loadMembers();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bindEventsAndInit);
+        } else {
+            bindEventsAndInit();
+        }
+    </script>
+</body>
+</html>
