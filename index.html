@@ -250,18 +250,14 @@
             renderMembers(filtered);
         }
 
-        // 출석 버튼 터치 영역 및 상태 업데이트
-        function toggleAttendance(index, btnElement) {
+        // 출석 카드 전체 터치 시 상태 토글
+        function toggleAttendanceCard(index) {
+            if (members[index].attendanceStatus === '출석') return; // 이미 완료된 건 변경 불가
             members[index].attendanceChecked = !members[index].attendanceChecked;
-            const isChecked = members[index].attendanceChecked;
-
-            if (isChecked) {
-                btnElement.className = "px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md bg-blue-600 text-white min-w-[90px] text-center";
-                btnElement.innerText = "출석완료";
-            } else {
-                btnElement.className = "px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-100 text-gray-500 min-w-[90px] text-center";
-                btnElement.innerText = "출석하기";
-            }
+            
+            const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+            const filtered = keyword ? members.filter(m => m.이름.toLowerCase().includes(keyword)) : members;
+            renderMembers(filtered);
         }
 
         function renderMembers(list) {
@@ -292,7 +288,6 @@
             list.forEach((m) => {
                 const originalIndex = members.findIndex(item => item.회원ID === m.회원ID);
                 const card = document.createElement('div');
-                card.className = 'bg-white p-4 rounded-xl shadow-sm flex items-center justify-between';
 
                 let controlHtml = '';
                 let middleHtml = '';
@@ -301,40 +296,186 @@
                     const isAlreadyChecked = m.attendanceStatus === '출석';
                     
                     if (isAlreadyChecked) {
-                        controlHtml = `<span class="text-xs bg-blue-100 text-blue-700 px-4 py-2 rounded-full font-bold">출석완료</span>`;
+                        card.className = 'bg-gray-100 p-4 rounded-xl shadow-sm flex items-center justify-between opacity-75';
+                        controlHtml = `<span class="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-bold">출석완료</span>`;
                     } else {
                         const isChecked = m.attendanceChecked;
-                        // 버튼 패딩을 넓히고(px-5 py-2.5) 최소 너비를 주어 여유 있게 터치 가능하도록 개선
-                        const btnBg = isChecked ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-500';
-                        const btnText = isChecked ? '출석완료' : '출석하기';
-                        controlHtml = `
-                            <button type="button" onclick="toggleAttendance(${originalIndex}, this)" class="px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm ${btnBg} min-w-[90px] text-center">
-                                ${btnText}
-                            </button>
-                        `;
+                        if (isChecked) {
+                            card.className = 'bg-blue-50 border-2 border-blue-500 p-4 rounded-xl shadow-sm flex items-center justify-between cursor-pointer transition-all';
+                            controlHtml = `<span class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-full font-bold shadow-sm">출석완료 ✓</span>`;
+                        } else {
+                            card.className = 'bg-white border border-gray-200 p-4 rounded-xl shadow-sm flex items-center justify-between cursor-pointer hover:border-gray-300 transition-all';
+                            controlHtml = `<span class="text-xs bg-gray-100 text-gray-400 px-3 py-1.5 rounded-full">미체크</span>`;
+                        }
+                        card.onclick = () => toggleAttendanceCard(originalIndex);
                     }
-                } else if (currentMode === 'activity') {
-                    let heartsContainer = '<div class="flex flex-col gap-1 px-2 flex-grow overflow-x-auto">';
-                    let allCats = new Set([...Object.keys(m.activityCounts || {}), ...Object.keys(m.tempActivityCounts || {})]);
-                    
-                    if (allCats.size === 0) {
-                        heartsContainer += '<span class="text-xs text-gray-300">칭찬 내역 없음</span>';
-                    } else {
-                        allCats.forEach(cat => {
-                            let saved = (m.activityCounts && m.activityCounts[cat]) || 0;
-                            let temp = (m.tempActivityCounts && m.tempActivityCounts[cat]) || 0;
-                            let total = saved + temp;
-                            if (total > 0) {
-                                let style = getCategoryStyle(cat);
-                                let hearts = '';
-                                for (let h = 0; h < total; h++) {
-                                    hearts += `<svg class="w-3.5 h-3.5 ${style.text} inline-block mr-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
+                } else {
+                    card.className = 'bg-white p-4 rounded-xl shadow-sm flex items-center justify-between';
+
+                    if (currentMode === 'activity') {
+                        let heartsContainer = '<div class="flex flex-col gap-1 px-2 flex-grow overflow-x-auto">';
+                        let allCats = new Set([...Object.keys(m.activityCounts || {}), ...Object.keys(m.tempActivityCounts || {})]);
+                        
+                        if (allCats.size === 0) {
+                            heartsContainer += '<span class="text-xs text-gray-300">칭찬 내역 없음</span>';
+                        } else {
+                            allCats.forEach(cat => {
+                                let saved = (m.activityCounts && m.activityCounts[cat]) || 0;
+                                let temp = (m.tempActivityCounts && m.tempActivityCounts[cat]) || 0;
+                                let total = saved + temp;
+                                if (total > 0) {
+                                    let style = getCategoryStyle(cat);
+                                    let hearts = '';
+                                    for (let h = 0; h < total; h++) {
+                                        hearts += `<svg class="w-3.5 h-3.5 ${style.text} inline-block mr-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
+                                    }
+                                    heartsContainer += `
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-[10px] px-1.5 py-0.5 rounded font-bold ${style.badgeBg}">${cat}</span>
+                                            <div class="flex items-center flex-wrap">${hearts}</div>
+                                        </div>
+                                    `;
                                 }
-                                heartsContainer += `
-                                    <div class="flex items-center gap-1.5">
-                                        <span class="text-[10px] px-1.5 py-0.5 rounded font-bold ${style.badgeBg}">${cat}</span>
-                                        <div class="flex items-center flex-wrap">${hearts}</div>
-                                    </div>
-                                `;
-                            }
+                            });
+                        }
+                        heartsContainer += '</div>';
+                        middleHtml = heartsContainer;
+
+                        if (!m.tempActivityCounts) m.tempActivityCounts = {};
+                        const currentCount = m.tempActivityCounts[currentCategory] || 0;
+
+                        controlHtml = `
+                            <div class="flex items-center space-x-2 flex-shrink-0">
+                                <button type="button" onclick="adjustCount(${originalIndex}, -1)" class="w-8 h-8 bg-gray-100 rounded-lg font-bold text-gray-600">-</button>
+                                <span id="cnt_${originalIndex}" class="w-8 text-center font-bold">${currentCount}</span>
+                                <button type="button" onclick="adjustCount(${originalIndex}, 1)" class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg font-bold">+</button>
+                            </div>
+                        `;
+                    } else if (currentMode === 'daily-rank') {
+                        const rankIndex = list.indexOf(m) + 1;
+                        const rankBadge = `<span class="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full font-bold mr-2">${rankIndex}위</span>`;
+                        const attBadge = m.attendanceStatus === '출석' ? '<span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">출석완료</span>' : '<span class="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">미출석</span>';
+                        const scoreBadge = `<span class="text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full font-bold">당일 칭찬: ${m.dailyScore || 0}개</span>`;
+
+                        controlHtml = `
+                            <div class="flex items-center space-x-1.5">
+                                ${attBadge}
+                                ${scoreBadge}
+                            </div>
+                        `;
+                        middleHtml = `<div class="flex items-center">${rankBadge}</div>`;
+                    } else if (currentMode === 'overall-rank') {
+                        const rankIndex = list.indexOf(m) + 1;
+                        const rankBadge = `<span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded-full font-bold mr-2">${rankIndex}위</span>`;
+                        const rateBadge = `<span class="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-bold">출석률: ${m.attendanceRate || 0}%</span>`;
+                        const totalScoreBadge = `<span class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold">전체 칭찬: ${m.overallScore || 0}개</span>`;
+
+                        controlHtml = `
+                            <div class="flex items-center space-x-1.5">
+                                ${rateBadge}
+                                ${totalScoreBadge}
+                            </div>
+                        `;
+                        middleHtml = `<div class="flex items-center">${rankBadge}</div>`;
+                    }
+                }
+
+                card.innerHTML = `
+                    <div class="flex items-center flex-shrink-0">
+                        <div>
+                            <div class="font-bold text-gray-800">
+                                <span>${m.이름 || '이름 없음'}</span>
+                            </div>
+                            <div class="text-xs text-gray-400 mt-0.5">${m.회원ID || ''}</div>
+                        </div>
+                    </div>
+                    ${currentMode === 'activity' || currentMode === 'daily-rank' || currentMode === 'overall-rank' ? middleHtml : ''}
+                    ${controlHtml}
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function adjustCount(index, delta) {
+            if (!members[index].tempActivityCounts) members[index].tempActivityCounts = {};
+            if (!members[index].tempActivityCounts[currentCategory]) members[index].tempActivityCounts[currentCategory] = 0;
+            
+            members[index].tempActivityCounts[currentCategory] += delta;
+            if (members[index].tempActivityCounts[currentCategory] < 0) {
+                members[index].tempActivityCounts[currentCategory] = 0;
+            }
+            
+            const count = members[index].tempActivityCounts[currentCategory];
+            const cntSpan = document.getElementById(`cnt_${index}`);
+            if (cntSpan) cntSpan.innerText = count;
+        }
+
+        async function submitData() {
+            const url = localStorage.getItem('GAS_URL');
+            const customDate = document.getElementById('recordDate').value;
+
+            if (!customDate) {
+                alert('체크할 날짜를 선택해주세요.');
+                return;
+            }
+
+            let queryUrl = `${url}?date=${customDate}`;
+
+            if (currentMode === 'attendance') {
+                let records = [];
+                members.forEach((m) => {
+                    if (m.attendanceStatus === '출석') return; 
+
+                    if (m.attendanceChecked) {
+                        records.push({
+                            memberId: m.회원ID,
+                            name: m.이름,
+                            status: '출석'
                         });
+                    }
+                });
+
+                if (records.length === 0) {
+                    alert('새로 체크된 출석 인원이 없습니다.');
+                    return;
+                }
+
+                queryUrl += `&action=attendance&records=${encodeURIComponent(JSON.stringify(records))}`;
+            } else if (currentMode === 'activity') {
+                let records = [];
+                members.forEach((m) => {
+                    const count = (m.tempActivityCounts && m.tempActivityCounts[currentCategory]) ? m.tempActivityCounts[currentCategory] : 0;
+                    if (count > 0) {
+                        records.push({
+                            memberId: m.회원ID,
+                            name: m.이름,
+                            count: count
+                        });
+                    }
+                });
+
+                if (records.length === 0) {
+                    alert(`[${currentCategory}] 항목에서 횟수가 0보다 큰 회원이 없습니다.`);
+                    return;
+                }
+
+                queryUrl += `&action=activity&activityName=${encodeURIComponent(currentCategory)}&records=${encodeURIComponent(JSON.stringify(records))}`;
+            }
+
+            try {
+                const response = await fetch(queryUrl);
+                const result = await response.json();
+                if (result.status === 'success') {
+                    alert('성공적으로 저장되었습니다!');
+                    members.forEach(m => { if (m.tempActivityCounts) m.tempActivityCounts = {}; });
+                    loadMembers(); 
+                } else {
+                    alert('저장 실패: ' + (result.message || '알 수 없는 오류'));
+                }
+            } catch (error) {
+                alert('통신 중 오류가 발생했습니다: ' + error);
+            }
+        }
+    </script>
+</body>
+</html>
