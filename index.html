@@ -250,11 +250,18 @@
             renderMembers(filtered);
         }
 
-        function toggleAttendance(index) {
+        // 전체 리렌더링 없이 해당 버튼만 직접 스타일 업데이트 (터치 밀림 방지)
+        function toggleAttendance(index, btnElement) {
             members[index].attendanceChecked = !members[index].attendanceChecked;
-            const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
-            const filtered = keyword ? members.filter(m => m.이름.toLowerCase().includes(keyword)) : members;
-            renderMembers(filtered);
+            const isChecked = members[index].attendanceChecked;
+
+            if (isChecked) {
+                btnElement.className = "px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md bg-blue-600 text-white";
+                btnElement.innerText = "출석완료";
+            } else {
+                btnElement.className = "px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm bg-gray-100 text-gray-500";
+                btnElement.innerText = "출석하기";
+            }
         }
 
         function renderMembers(list) {
@@ -297,11 +304,10 @@
                         controlHtml = `<span class="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-bold">출석완료</span>`;
                     } else {
                         const isChecked = m.attendanceChecked;
-                        // 클릭했을 때 명확하게 파란색 [출석완료] 스타일로 변경되도록 수정
                         const btnBg = isChecked ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-500';
                         const btnText = isChecked ? '출석완료' : '출석하기';
                         controlHtml = `
-                            <button type="button" onclick="toggleAttendance(${originalIndex})" class="px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${btnBg}">
+                            <button type="button" onclick="toggleAttendance(${originalIndex}, this)" class="px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${btnBg}">
                                 ${btnText}
                             </button>
                         `;
