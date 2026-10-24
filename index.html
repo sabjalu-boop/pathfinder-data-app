@@ -233,7 +233,9 @@
                     return;
                 }
 
-                members.forEach(m => {
+                // 각 회원 데이터에 고유한 절대 인덱스(_uniqueIndex) 부여 (중복 ID 충돌 원천 방지)
+                members.forEach((m, idx) => {
+                    m._uniqueIndex = idx;
                     m.attendanceChecked = (m.attendanceStatus === '출석');
                 });
 
@@ -250,10 +252,10 @@
             renderMembers(filtered);
         }
 
-        // 출석 카드 전체 터치 시 상태 토글
-        function toggleAttendanceCard(index) {
-            if (members[index].attendanceStatus === '출석') return; // 이미 완료된 건 변경 불가
-            members[index].attendanceChecked = !members[index].attendanceChecked;
+        // 고유 인덱스를 직접 사용하여 정확한 회원을 토글
+        function toggleAttendanceCard(originalIndex) {
+            if (members[originalIndex].attendanceStatus === '출석') return; 
+            members[originalIndex].attendanceChecked = !members[originalIndex].attendanceChecked;
             
             const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
             const filtered = keyword ? members.filter(m => m.이름.toLowerCase().includes(keyword)) : members;
@@ -286,7 +288,7 @@
             }
 
             list.forEach((m) => {
-                const originalIndex = members.findIndex(item => item.회원ID === m.회원ID);
+                const originalIndex = m._uniqueIndex; // 중복 ID 충돌을 해결하는 핵심 고유 인덱스
                 const card = document.createElement('div');
 
                 let controlHtml = '';
@@ -396,17 +398,17 @@
             });
         }
 
-        function adjustCount(index, delta) {
-            if (!members[index].tempActivityCounts) members[index].tempActivityCounts = {};
-            if (!members[index].tempActivityCounts[currentCategory]) members[index].tempActivityCounts[currentCategory] = 0;
+        function adjustCount(originalIndex, delta) {
+            if (!members[originalIndex].tempActivityCounts) members[originalIndex].tempActivityCounts = {};
+            if (!members[originalIndex].tempActivityCounts[currentCategory]) members[originalIndex].tempActivityCounts[currentCategory] = 0;
             
-            members[index].tempActivityCounts[currentCategory] += delta;
-            if (members[index].tempActivityCounts[currentCategory] < 0) {
-                members[index].tempActivityCounts[currentCategory] = 0;
+            members[originalIndex].tempActivityCounts[currentCategory] += delta;
+            if (members[originalIndex].tempActivityCounts[currentCategory] < 0) {
+                members[originalIndex].tempActivityCounts[currentCategory] = 0;
             }
             
-            const count = members[index].tempActivityCounts[currentCategory];
-            const cntSpan = document.getElementById(`cnt_${index}`);
+            const count = members[originalIndex].tempActivityCounts[currentCategory];
+            const cntSpan = document.getElementById(`cnt_${originalIndex}`);
             if (cntSpan) cntSpan.innerText = count;
         }
 
@@ -434,48 +436,3 @@
                         });
                     }
                 });
-
-                if (records.length === 0) {
-                    alert('새로 체크된 출석 인원이 없습니다.');
-                    return;
-                }
-
-                queryUrl += `&action=attendance&records=${encodeURIComponent(JSON.stringify(records))}`;
-            } else if (currentMode === 'activity') {
-                let records = [];
-                members.forEach((m) => {
-                    const count = (m.tempActivityCounts && m.tempActivityCounts[currentCategory]) ? m.tempActivityCounts[currentCategory] : 0;
-                    if (count > 0) {
-                        records.push({
-                            memberId: m.회원ID,
-                            name: m.이름,
-                            count: count
-                        });
-                    }
-                });
-
-                if (records.length === 0) {
-                    alert(`[${currentCategory}] 항목에서 횟수가 0보다 큰 회원이 없습니다.`);
-                    return;
-                }
-
-                queryUrl += `&action=activity&activityName=${encodeURIComponent(currentCategory)}&records=${encodeURIComponent(JSON.stringify(records))}`;
-            }
-
-            try {
-                const response = await fetch(queryUrl);
-                const result = await response.json();
-                if (result.status === 'success') {
-                    alert('성공적으로 저장되었습니다!');
-                    members.forEach(m => { if (m.tempActivityCounts) m.tempActivityCounts = {}; });
-                    loadMembers(); 
-                } else {
-                    alert('저장 실패: ' + (result.message || '알 수 없는 오류'));
-                }
-            } catch (error) {
-                alert('통신 중 오류가 발생했습니다: ' + error);
-            }
-        }
-    </script>
-</body>
-</html>
