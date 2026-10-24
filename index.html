@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-title" content="CS패스파인더">
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-50 text-gray-800 pb-20">
+<body class="bg-gray-50 text-gray-800 pb-24">
 
     <!-- 상단 헤더 -->
     <header class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
@@ -60,16 +60,16 @@
             <input type="text" id="searchInput" oninput="filterMembers()" placeholder="🔍 회원 이름 검색..." class="w-full border p-3 rounded-xl text-sm bg-white shadow-sm">
         </div>
 
-        <!-- 회원 목록 영역 -->
-        <div id="memberListContainer" class="space-y-3">
-            <div class="text-center text-gray-400 py-10 text-sm">데이터를 불러오는 중입니다...</div>
+        <!-- 4열 그리드 회원 타일 영역 -->
+        <div id="memberListContainer" class="grid grid-cols-4 gap-2.5">
+            <div class="col-span-4 text-center text-gray-400 py-10 text-sm">데이터를 불러오는 중입니다...</div>
         </div>
 
     </div>
 
     <!-- 하단 고정 저장 버튼 -->
-    <div id="footerBar" class="fixed bottom-0 left-0 right-0 bg-white border-t p-3 max-w-md mx-auto shadow-lg">
-        <button onclick="submitData()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-center">전송 및 저장하기</button>
+    <div id="footerBar" class="fixed bottom-0 left-0 right-0 bg-white border-t p-3 max-w-md mx-auto shadow-lg z-10">
+        <button onclick="submitData()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-center text-sm shadow-md">전송 및 저장하기</button>
     </div>
 
     <script>
@@ -80,8 +80,8 @@
         let currentCategory = categories[0];
 
         const categoryColorMap = {
-            '찬양': { text: 'text-rose-500', badgeBg: 'bg-rose-50 text-rose-600 border border-rose-200' },
-            '태도': { text: 'text-amber-500', badgeBg: 'bg-amber-50 text-amber-600 border border-amber-200' }
+            '찬양': { text: 'text-rose-500', badgeBg: 'bg-rose-50 text-rose-600' },
+            '태도': { text: 'text-amber-500', badgeBg: 'bg-amber-50 text-amber-600' }
         };
 
         function getTodayString() {
@@ -92,13 +92,29 @@
             return `${year}-${month}-${day}`;
         }
 
-        // 스크립트 실행 즉시 날짜 입력 칸에 오늘 날짜 강제 세팅 (렌더링 지연 방지)
+        // 즉시 오늘 날짜 세팅 안전장치
         (function() {
             const dateInput = document.getElementById('recordDate');
             if (dateInput) {
                 dateInput.value = getTodayString();
             }
         })();
+
+        function getCategoryStyle(cat) {
+            if (!categoryColorMap[cat]) {
+                const palette = [
+                    { text: 'text-blue-500', badgeBg: 'bg-blue-50 text-blue-600' },
+                    { text: 'text-emerald-500', badgeBg: 'bg-emerald-50 text-emerald-600' },
+                    { text: 'text-purple-500', badgeBg: 'bg-purple-50 text-purple-700' },
+                    { text: 'text-teal-500', badgeBg: 'bg-teal-50 text-teal-600' },
+                    { text: 'text-indigo-500', badgeBg: 'bg-indigo-50 text-indigo-600' }
+                ];
+                let hash = 0;
+                for (let i = 0; i < cat.length; i++) hash += cat.charCodeAt(i);
+                categoryColorMap[cat] = palette[hash % palette.length];
+            }
+            return categoryColorMap[cat];
+        }
 
         window.onload = function() {
             const dateInput = document.getElementById('recordDate');
@@ -112,25 +128,9 @@
                 setTimeout(loadMembers, 100);
             } else {
                 document.getElementById('settingsPanel').classList.remove('hidden');
-                document.getElementById('memberListContainer').innerHTML = '<div class="text-center text-gray-400 py-10 text-sm">우측 상단 [설정]에서 구글 스크립트 URL을 입력해주세요.</div>';
+                document.getElementById('memberListContainer').innerHTML = '<div class="col-span-4 text-center text-gray-400 py-10 text-sm">우측 상단 [설정]에서 구글 스크립트 URL을 입력해주세요.</div>';
             }
         };
-
-        function getCategoryStyle(cat) {
-            if (!categoryColorMap[cat]) {
-                const palette = [
-                    { text: 'text-blue-500', badgeBg: 'bg-blue-50 text-blue-600 border border-blue-200' },
-                    { text: 'text-emerald-500', badgeBg: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
-                    { text: 'text-purple-500', badgeBg: 'bg-purple-50 text-purple-700 border border-purple-200' },
-                    { text: 'text-teal-500', badgeBg: 'bg-teal-50 text-teal-600 border border-teal-200' },
-                    { text: 'text-indigo-500', badgeBg: 'bg-indigo-50 text-indigo-600 border border-indigo-200' }
-                ];
-                let hash = 0;
-                for (let i = 0; i < cat.length; i++) hash += cat.charCodeAt(i);
-                categoryColorMap[cat] = palette[hash % palette.length];
-            }
-            return categoryColorMap[cat];
-        }
 
         function toggleSettings() {
             const panel = document.getElementById('settingsPanel');
@@ -245,7 +245,7 @@
             }
 
             const container = document.getElementById('memberListContainer');
-            container.innerHTML = '<div class="text-center text-gray-400 py-10 text-sm">회원 명부를 불러오는 중...</div>';
+            container.innerHTML = '<div class="col-span-4 text-center text-gray-400 py-10 text-sm">회원 명부를 불러오는 중...</div>';
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 6000);
@@ -258,7 +258,7 @@
                 members = await response.json();
                 
                 if (!Array.isArray(members) || members.length === 0) {
-                    container.innerHTML = '<div class="text-center text-gray-400 py-10 text-sm">등록된 회원이 없습니다.</div>';
+                    container.innerHTML = '<div class="col-span-4 text-center text-gray-400 py-10 text-sm">등록된 회원이 없습니다.</div>';
                     return;
                 }
 
@@ -273,9 +273,9 @@
                 clearTimeout(timeoutId);
                 console.error(error);
                 if (error.name === 'AbortError') {
-                    container.innerHTML = '<div class="text-center text-red-400 py-10 text-sm">로드 실패: 서버 응답 시간이 초과되었습니다. URL을 확인해주세요.</div>';
+                    container.innerHTML = '<div class="col-span-4 text-center text-red-400 py-10 text-sm">로드 실패: 서버 응답 시간이 초과되었습니다. URL을 확인해주세요.</div>';
                 } else {
-                    container.innerHTML = `<div class="text-center text-red-400 py-10 text-sm">로드 실패: ${error.message}</div>`;
+                    container.innerHTML = `<div class="col-span-4 text-center text-red-400 py-10 text-sm">로드 실패: ${error.message}</div>`;
                 }
             }
         }
@@ -312,7 +312,7 @@
             container.innerHTML = '';
 
             if (list.length === 0) {
-                container.innerHTML = '<div class="text-center text-gray-400 py-10 text-sm">검색된 회원이 없습니다.</div>';
+                container.innerHTML = '<div class="col-span-4 text-center text-gray-400 py-10 text-sm">검색된 회원이 없습니다.</div>';
                 return;
             }
 
@@ -334,117 +334,81 @@
 
             list.forEach((m) => {
                 const originalIndex = m._uniqueIndex;
-                const card = document.createElement('div');
+                const tile = document.createElement('div');
 
-                let controlHtml = '';
-                let middleHtml = '';
+                let subTextHtml = '';
+                let tileClass = '';
 
                 if (currentMode === 'attendance') {
                     const isAlreadyChecked = m.attendanceStatus === '출석';
                     
                     if (isAlreadyChecked) {
-                        card.className = 'bg-gray-100 p-4 rounded-xl shadow-sm flex items-center justify-between opacity-75';
-                        controlHtml = `<span class="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-bold">출석완료</span>`;
+                        tileClass = 'bg-gray-100 border border-gray-200 p-2 rounded-xl flex flex-col items-center justify-center text-center opacity-70 h-24';
+                        subTextHtml = `<span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold mt-1">출석완료</span>`;
                     } else {
                         const isChecked = m.attendanceChecked;
                         if (isChecked) {
-                            card.className = 'bg-blue-50 border-2 border-blue-500 p-4 rounded-xl shadow-sm flex items-center justify-between cursor-pointer transition-all';
-                            controlHtml = `<span class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-full font-bold shadow-sm">출석완료 ✓</span>`;
+                            tileClass = 'bg-blue-50 border-2 border-blue-500 p-2 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer shadow-sm transition-all h-24';
+                            subTextHtml = `<span class="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-bold mt-1">출석 ✓</span>`;
                         } else {
-                            card.className = 'bg-white border border-gray-200 p-4 rounded-xl shadow-sm flex items-center justify-between cursor-pointer hover:border-gray-300 transition-all';
-                            controlHtml = `<span class="text-xs bg-gray-100 text-gray-400 px-3 py-1.5 rounded-full">미체크</span>`;
+                            tileClass = 'bg-white border border-gray-200 p-2 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer hover:border-gray-300 shadow-sm transition-all h-24';
+                            subTextHtml = `<span class="text-[10px] text-gray-400 mt-1">미체크</span>`;
                         }
-                        card.onclick = () => toggleAttendanceCard(originalIndex);
+                        tile.onclick = () => toggleAttendanceCard(originalIndex);
                     }
                 } else if (currentMode === 'activity') {
                     let tempCount = (m.tempActivityCounts && m.tempActivityCounts[currentCategory]) ? m.tempActivityCounts[currentCategory] : 0;
 
                     if (tempCount > 0) {
-                        card.className = 'bg-blue-50 border-2 border-blue-500 p-4 rounded-xl shadow-sm flex items-center justify-between cursor-pointer transition-all';
-                        controlHtml = `<span class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-full font-bold shadow-sm">+${tempCount}개 선택</span>`;
+                        tileClass = 'bg-blue-50 border-2 border-blue-500 p-2 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer shadow-sm transition-all h-24';
+                        subTextHtml = `<span class="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-bold mt-1">+${tempCount}개</span>`;
                     } else {
-                        card.className = 'bg-white border border-gray-200 p-4 rounded-xl shadow-sm flex items-center justify-between cursor-pointer hover:border-gray-300 transition-all';
-                        controlHtml = `<span class="text-xs bg-gray-100 text-gray-400 px-3 py-1.5 rounded-full">미체크</span>`;
+                        tileClass = 'bg-white border border-gray-200 p-2 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer hover:border-gray-300 shadow-sm transition-all h-24';
+                        subTextHtml = `<span class="text-[10px] text-gray-400 mt-1">미체크</span>`;
                     }
-                    card.onclick = () => toggleActivityCard(originalIndex);
+                    tile.onclick = () => toggleActivityCard(originalIndex);
 
-                    let heartsContainer = '<div class="flex flex-col gap-1 px-2 flex-grow overflow-x-auto">';
-                    let allCats = new Set([...Object.keys(m.activityCounts || {}), ...Object.keys(m.tempActivityCounts || {})]);
-                    
-                    if (allCats.size === 0) {
-                        heartsContainer += '<span class="text-xs text-gray-300">칭찬 내역 없음</span>';
-                    } else {
-                        allCats.forEach(cat => {
-                            let saved = (m.activityCounts && m.activityCounts[cat]) || 0;
-                            let temp = (m.tempActivityCounts && m.tempActivityCounts[cat]) || 0;
-                            let total = saved + temp;
-                            if (total > 0) {
-                                let style = getCategoryStyle(cat);
-                                let hearts = '';
-                                if (total <= 4) {
-                                    for (let h = 0; h < total; h++) {
-                                        hearts += `<svg class="w-3.5 h-3.5 ${style.text} inline-block mr-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
-                                    }
-                                } else {
-                                    hearts += `<svg class="w-3.5 h-3.5 ${style.text} inline-block mr-1 align-middle" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg><span class="text-xs font-bold ${style.text} align-middle">${total}</span>`;
-                                }
-                                heartsContainer += `
-                                    <div class="flex items-center gap-1.5">
-                                        <span class="text-[10px] px-1.5 py-0.5 rounded font-bold ${style.badgeBg}">${cat}</span>
-                                        <div class="flex items-center flex-wrap">${hearts}</div>
-                                    </div>
-                                `;
+                    // 누적 칭찬(하트/숫자) 표시 요약
+                    let saved = (m.activityCounts && m.activityCounts[currentCategory]) || 0;
+                    let total = saved + tempCount;
+                    if (total > 0) {
+                        let style = getCategoryStyle(currentCategory);
+                        if (total <= 3) {
+                            let hearts = '';
+                            for (let h = 0; h < total; h++) {
+                                hearts += `<svg class="w-3 h-3 ${style.text} inline-block" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
                             }
-                        });
+                            subTextHtml += `<div class="flex items-center justify-center mt-0.5">${hearts}</div>`;
+                        } else {
+                            subTextHtml += `<div class="text-[10px] font-bold ${style.text} mt-0.5">❤️ ${total}</div>`;
+                        }
                     }
-                    heartsContainer += '</div>';
-                    middleHtml = heartsContainer;
 
                 } else {
-                    card.className = 'bg-white p-4 rounded-xl shadow-sm flex items-center justify-between';
+                    tileClass = 'bg-white border border-gray-200 p-2 rounded-xl flex flex-col items-center justify-center text-center shadow-sm h-24';
 
                     if (currentMode === 'daily-rank') {
                         const rankIndex = list.indexOf(m) + 1;
-                        const rankBadge = `<span class="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full font-bold mr-2">${rankIndex}위</span>`;
-                        const attBadge = m.attendanceStatus === '출석' ? '<span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">출석완료</span>' : '<span class="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">미출석</span>';
-                        const scoreBadge = `<span class="text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full font-bold">당일 칭찬: ${m.dailyScore || 0}개</span>`;
-
-                        controlHtml = `
-                            <div class="flex items-center space-x-1.5">
-                                ${attBadge}
-                                ${scoreBadge}
-                            </div>
-                        `;
-                        middleHtml = `<div class="flex items-center">${rankBadge}</div>`;
+                        const rankBadge = `<span class="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full font-bold mb-1">${rankIndex}위</span>`;
+                        const scoreBadge = `<span class="text-[10px] text-purple-700 font-bold mt-1">칭찬: ${m.dailyScore || 0}</span>`;
+                        subTextHtml = `${rankBadge}${scoreBadge}`;
                     } else if (currentMode === 'overall-rank') {
                         const rankIndex = list.indexOf(m) + 1;
-                        const rankBadge = `<span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded-full font-bold mr-2">${rankIndex}위</span>`;
-                        const rateBadge = `<span class="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-bold">출석률: ${m.attendanceRate || 0}%</span>`;
-                        const totalScoreBadge = `<span class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold">전체 칭찬: ${m.overallScore || 0}개</span>`;
-
-                        controlHtml = `
-                            <div class="flex items-center space-x-1.5">
-                                ${rateBadge}
-                                ${totalScoreBadge}
-                            </div>
-                        `;
-                        middleHtml = `<div class="flex items-center">${rankBadge}</div>`;
+                        const rankBadge = `<span class="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded-full font-bold mb-1">${rankIndex}위</span>`;
+                        const rateBadge = `<span class="text-[10px] text-blue-700 font-bold mt-1">출석 ${m.attendanceRate || 0}%</span>`;
+                        subTextHtml = `${rankBadge}${rateBadge}`;
                     }
                 }
 
-                card.innerHTML = `
-                    <div class="flex items-center flex-shrink-0">
-                        <div>
-                            <div class="font-bold text-gray-800">
-                                <span>${m.이름 || '이름 없음'}</span>
-                            </div>
-                            <div class="text-xs text-gray-400 mt-0.5">${m.회원ID || ''}</div>
-                        </div>
+                tile.className = tileClass;
+                tile.innerHTML = `
+                    <div class="font-bold text-xs text-gray-800 truncate w-full px-1">
+                        ${m.이름 || '이름 없음'}
                     </div>
-                    ${middleHtml}
-                    ${controlHtml}
+                    <div class="text-[10px] text-gray-400 truncate w-full">${m.회원ID || ''}</div>
+                    ${subTextHtml}
                 `;
-                container.appendChild(card);
+                container.appendChild(tile);
             });
         }
 
