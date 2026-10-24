@@ -79,7 +79,6 @@
         let categories = JSON.parse(localStorage.getItem('PATHFINDER_CATS')) || ['찬양', '태도'];
         let currentCategory = categories[0];
 
-        // 카테고리별 고유 색상 팔레트 정의
         const categoryColorMap = {
             '찬양': { text: 'text-rose-500', badgeBg: 'bg-rose-50 text-rose-600 border border-rose-200' },
             '태도': { text: 'text-amber-500', badgeBg: 'bg-amber-50 text-amber-600 border border-amber-200' }
@@ -234,6 +233,11 @@
                     return;
                 }
 
+                // 회원 데이터에 출석 체크 상태 메모리 초기화
+                members.forEach(m => {
+                    m.attendanceChecked = (m.attendanceStatus === '출석');
+                });
+
                 renderMembers(members);
             } catch (error) {
                 console.error(error);
@@ -245,6 +249,10 @@
             const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
             const filtered = members.filter(m => m.이름 && m.이름.toLowerCase().includes(keyword));
             renderMembers(filtered);
+        }
+
+        function toggleAttendance(index, checkbox) {
+            members[index].attendanceChecked = checkbox.checked;
         }
 
         function renderMembers(list) {
@@ -278,24 +286,23 @@
                 card.className = 'bg-white p-4 rounded-xl shadow-sm flex items-center justify-between';
 
                 let controlHtml = '';
-                let middleHtml = ''; // 이름과 조절 버튼 사이의 공간 (하트 스티커 혹은 순위 정보)
+                let middleHtml = '';
 
                 if (currentMode === 'attendance') {
                     const isAlreadyChecked = m.attendanceStatus === '출석';
-                    const isChecked = isAlreadyChecked ? 'checked' : '';
+                    const isChecked = m.attendanceChecked ? 'checked' : '';
                     const isDisabled = isAlreadyChecked ? 'disabled' : '';
                     const badgeText = isAlreadyChecked ? '출석완료' : '출석';
                     const cursorStyle = isAlreadyChecked ? 'cursor-not-allowed opacity-75' : 'cursor-pointer';
 
                     controlHtml = `
                         <label class="relative inline-flex items-center ${cursorStyle}">
-                            <input type="checkbox" id="att_${originalIndex}" ${isChecked} ${isDisabled} class="sr-only peer">
+                            <input type="checkbox" id="att_${originalIndex}" ${isChecked} ${isDisabled} onchange="toggleAttendance(${originalIndex}, this)" class="sr-only peer">
                             <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                             <span class="ml-2 text-sm font-medium ${isAlreadyChecked ? 'text-blue-600 font-bold' : 'text-gray-700'}">${badgeText}</span>
                         </label>
                     `;
                 } else if (currentMode === 'activity') {
-                    // 칭찬 모드: 이름과 - + 버튼 사이에 하트 스티커 누적 표현
                     let heartsContainer = '<div class="flex flex-col gap-1 px-2 flex-grow overflow-x-auto">';
                     let allCats = new Set([...Object.keys(m.activityCounts || {}), ...Object.keys(m.tempActivityCounts || {})]);
                     
@@ -403,12 +410,11 @@
 
             if (currentMode === 'attendance') {
                 let records = [];
-                members.forEach((m, index) => {
+                // DOM 요소를 읽는 대신 메모리에 저장된 attendanceChecked 상태를 직접 참조
+                members.forEach((m) => {
                     if (m.attendanceStatus === '출석') return; 
 
-                    const checkbox = document.getElementById(`att_${index}`);
-                    const isChecked = checkbox ? checkbox.checked : false;
-                    if (isChecked) {
+                    if (m.attendanceChecked) {
                         records.push({
                             memberId: m.회원ID,
                             name: m.이름,
@@ -425,7 +431,7 @@
                 queryUrl += `&action=attendance&records=${encodeURIComponent(JSON.stringify(records))}`;
             } else if (currentMode === 'activity') {
                 let records = [];
-                members.forEach((m, index) => {
+                members.forEach((m) => {
                     const count = (m.tempActivityCounts && m.tempActivityCounts[currentCategory]) ? m.tempActivityCounts[currentCategory] : 0;
                     if (count > 0) {
                         records.push({
